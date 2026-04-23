@@ -35,15 +35,21 @@ interface StoreState {
 
   upsertCustomer: (c: Customer) => void;
   deleteCustomer: (id: string) => void;
+  reorderCustomers: (next: Customer[]) => void;
 
   upsertVendor: (v: Vendor) => void;
   deleteVendor: (id: string) => void;
+  reorderVendors: (next: Vendor[]) => void;
 
   upsertPurchase: (p: PurchaseOrder) => void;
   deletePurchase: (id: string) => void;
+  reorderPurchases: (next: PurchaseOrder[]) => void;
 
   upsertLedger: (l: LedgerEntry) => void;
   deleteLedger: (id: string) => void;
+  reorderLedger: (next: LedgerEntry[]) => void;
+
+  reorderInvoices: (next: Invoice[]) => void;
 
   addToCart: (p: Product, qty?: number) => void;
   updateCartQty: (id: string, qty: number) => void;
@@ -197,12 +203,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     deleteProduct: remove(setProducts),
     upsertCustomer: upsert(setCustomers),
     deleteCustomer: remove(setCustomers),
+    reorderCustomers: setCustomers,
     upsertVendor: upsert(setVendors),
     deleteVendor: remove(setVendors),
+    reorderVendors: setVendors,
     upsertPurchase: upsert(setPurchases),
     deletePurchase: remove(setPurchases),
+    reorderPurchases: setPurchases,
     upsertLedger: upsert(setLedger),
     deleteLedger: remove(setLedger),
+    reorderLedger: setLedger,
+    reorderInvoices: setInvoices,
 
     addToCart: (p, qty = 1) => setCart((prev) => {
       const idx = prev.findIndex((c) => c.product.id === p.id);
