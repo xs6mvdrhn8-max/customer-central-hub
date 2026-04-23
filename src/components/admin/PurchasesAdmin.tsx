@@ -5,8 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
+import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
+import { SortableList } from '@/components/SortableList';
 
 const empty: PurchaseOrder = {
   id: '', vendorName: '', status: 'ordered', orderDate: new Date().toISOString().slice(0, 10),
@@ -14,8 +16,9 @@ const empty: PurchaseOrder = {
 };
 
 export function PurchasesAdmin() {
-  const { purchases, vendors, upsertPurchase, deletePurchase, formatPrice } = useStore();
+  const { purchases, vendors, products, upsertPurchase, deletePurchase, reorderPurchases, formatPrice } = useStore();
   const [form, setForm] = useState<PurchaseOrder>(empty);
+  const [scanLineIdx, setScanLineIdx] = useState<number | null>(null);
 
   const updateLine = (i: number, k: keyof PurchaseLine, v: any) => {
     setForm((f) => {
@@ -77,7 +80,12 @@ export function PurchasesAdmin() {
             <div className="space-y-2">
               {form.lines.map((l, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2 items-end">
-                  <Input className="col-span-4" placeholder="Item name" value={l.itemName} onChange={(e) => updateLine(i, 'itemName', e.target.value)} />
+                  <div className="col-span-4 flex gap-1">
+                    <Input className="flex-1" placeholder="Item name / barcode" value={l.itemName} onChange={(e) => updateLine(i, 'itemName', e.target.value)} />
+                    <Button type="button" size="icon" variant="outline" className="shrink-0" onClick={() => setScanLineIdx(i)} title="Scan barcode">
+                      <ScanLine className="w-4 h-4" />
+                    </Button>
+                  </div>
                   <Input className="col-span-2" type="number" placeholder="Order Qty" value={l.orderedQty || ''} onChange={(e) => updateLine(i, 'orderedQty', Number(e.target.value))} />
                   <Input className="col-span-2" type="number" placeholder="Recv Qty" value={l.receivedQty || ''} onChange={(e) => updateLine(i, 'receivedQty', Number(e.target.value))} />
                   <Input className="col-span-3" type="number" placeholder="Cost" value={l.cost || ''} onChange={(e) => updateLine(i, 'cost', Number(e.target.value))} />
@@ -95,6 +103,28 @@ export function PurchasesAdmin() {
             <Button type="button" variant="outline" onClick={() => setForm(empty)}>Reset</Button>
           </div>
         </form>
+
+        {scanLineIdx !== null && (
+          <BarcodeScannerModal
+            onClose={() => setScanLineIdx(null)}
+            onScan={(code) => {
+              const idx = scanLineIdx;
+              setScanLineIdx(null);
+              if (idx === null) return;
+              const hit = products.find((p) => (p.barcode || '').trim() === code.trim());
+              setForm((f) => {
+                const lines = [...f.lines];
+                lines[idx] = {
+                  ...lines[idx],
+                  itemName: hit ? hit.name : code,
+                  cost: hit && !lines[idx].cost ? hit.cost : lines[idx].cost,
+                };
+                return { ...f, lines };
+              });
+              toast.success(hit ? `Matched: ${hit.name}` : `Scanned: ${code}`);
+            }}
+          />
+        )}
       </Card>
 
       <Card className="p-4">
@@ -102,9 +132,13 @@ export function PurchasesAdmin() {
         {purchases.length === 0 ? (
           <p className="text-sm text-muted-foreground">No purchase orders.</p>
         ) : (
-          <div className="space-y-2">
-            {purchases.map((p) => (
-              <div key={p.id} className="p-3 rounded-md bg-muted/40">
+          <SortableList
+            className="space-y-2"
+            items={purchases}
+            getId={(p) => p.id}
+            onReorder={reorderPurchases}
+            renderItem={(p) => (
+              <div className="p-3 rounded-md bg-muted/40">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium text-sm">{p.vendorName}</p>
@@ -120,8 +154,8 @@ export function PurchasesAdmin() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </Card>
     </div>

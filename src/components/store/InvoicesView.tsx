@@ -2,9 +2,10 @@ import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { SortableList } from '@/components/SortableList';
 
 export function InvoicesView() {
-  const { invoices, deleteInvoice, clearInvoices, formatPrice } = useStore();
+  const { invoices, deleteInvoice, clearInvoices, reorderInvoices, formatPrice } = useStore();
 
   return (
     <Card className="p-6">
@@ -21,9 +22,13 @@ export function InvoicesView() {
       {invoices.length === 0 ? (
         <p className="text-sm text-muted-foreground">No invoices yet.</p>
       ) : (
-        <div className="space-y-3">
-          {invoices.map((inv) => (
-            <Card key={inv.id} className="p-4 bg-muted/30">
+        <SortableList
+          className="space-y-3"
+          items={invoices}
+          getId={(inv) => inv.id}
+          onReorder={reorderInvoices}
+          renderItem={(inv) => (
+            <Card className="p-4 bg-muted/30">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-semibold">{inv.customerName}</p>
@@ -52,8 +57,8 @@ export function InvoicesView() {
                 </Button>
               </div>
             </Card>
-          ))}
-        </div>
+          )}
+        />
       )}
     </Card>
   );

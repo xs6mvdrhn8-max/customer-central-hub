@@ -8,11 +8,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SortableList } from '@/components/SortableList';
 
 const empty: LedgerEntry = { id: '', type: 'receivable', name: '', vendorId: '', amount: 0, dueDate: '', note: '' };
 
 export function LedgerAdmin() {
-  const { ledger, vendors, upsertLedger, deleteLedger, formatPrice } = useStore();
+  const { ledger, vendors, upsertLedger, deleteLedger, reorderLedger, formatPrice } = useStore();
   const [form, setForm] = useState<LedgerEntry>(empty);
 
   const submit = (e: React.FormEvent) => {
@@ -66,9 +67,13 @@ export function LedgerAdmin() {
         {ledger.length === 0 ? (
           <p className="text-sm text-muted-foreground">No ledger entries.</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
-            {ledger.map((l) => (
-              <div key={l.id} className="flex items-center justify-between p-3 rounded-md bg-muted/40">
+          <SortableList
+            className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1"
+            items={ledger}
+            getId={(l) => l.id}
+            onReorder={reorderLedger}
+            renderItem={(l) => (
+              <div className="flex items-center justify-between p-3 rounded-md bg-muted/40">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <Badge variant={l.type === 'receivable' ? 'default' : 'destructive'}>
@@ -89,8 +94,8 @@ export function LedgerAdmin() {
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </Card>
     </div>

@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SortableList } from '@/components/SortableList';
 
 const empty: Customer = { id: '', name: '', phone: '', note: '' };
 
 export function CustomersAdmin() {
-  const { customers, upsertCustomer, deleteCustomer } = useStore();
+  const { customers, upsertCustomer, deleteCustomer, reorderCustomers } = useStore();
   const [form, setForm] = useState<Customer>(empty);
 
   const submit = (e: React.FormEvent) => {
@@ -42,10 +43,14 @@ export function CustomersAdmin() {
         {customers.length === 0 ? (
           <p className="text-sm text-muted-foreground">No customers yet.</p>
         ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
-            {customers.map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-3 rounded-md bg-muted/40">
-                <div>
+          <SortableList
+            className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1"
+            items={customers}
+            getId={(c) => c.id}
+            onReorder={reorderCustomers}
+            renderItem={(c) => (
+              <div className="flex items-center justify-between p-3 rounded-md bg-muted/40">
+                <div className="min-w-0">
                   <p className="font-medium text-sm">{c.name}</p>
                   <p className="text-xs text-muted-foreground">{c.phone} {c.note && `· ${c.note}`}</p>
                 </div>
@@ -58,8 +63,8 @@ export function CustomersAdmin() {
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </Card>
     </div>

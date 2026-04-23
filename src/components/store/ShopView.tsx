@@ -3,8 +3,9 @@ import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ShoppingBag, Search } from 'lucide-react';
+import { ShoppingBag, Search, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
+import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
 
 export function ShopView() {
   const { products, addToCart, formatPrice, prefs } = useStore();
@@ -16,7 +17,7 @@ export function ShopView() {
 
   const filtered = products.filter((p) => {
     const q = search.toLowerCase();
-    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q);
+    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
     const matchesC = category === 'all' || category === allLabel || p.category === category;
     return matchesQ && matchesC;
   });
@@ -28,13 +29,28 @@ export function ShopView() {
         <p className="text-sm text-muted-foreground">စုစုပေါင်း {products.length.toLocaleString()} မျိုး</p>
       </div>
 
-      <div className="relative max-w-xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ပစ္စည်းအမည် ရှာရန်..."
-          className="pl-10"
+      <div className="flex gap-2 max-w-xl">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ပစ္စည်းအမည် / barcode ရှာရန်..."
+            className="pl-10"
+          />
+        </div>
+        <BarcodeScanButton
+          onScan={(code) => {
+            const hit = products.find((p) => (p.barcode || '').trim() === code.trim());
+            if (hit) {
+              if (hit.stock <= 0) return toast.error(`${hit.name} လက်ကျန်မရှိပါ`);
+              addToCart(hit);
+              toast.success(`${hit.name} ထည့်လိုက်ပါပြီ`);
+            } else {
+              setSearch(code);
+              toast(`Barcode မတွေ့ပါ — "${code}" ဖြင့်ရှာပေးပါပြီ`);
+            }
+          }}
         />
       </div>
 
@@ -115,5 +131,25 @@ export function ShopView() {
         <div className="text-center py-16 text-muted-foreground">ပစ္စည်းမတွေ့ပါ</div>
       )}
     </div>
+  );
+}
+
+function BarcodeScanButton({ onScan }: { onScan: (code: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="outline" size="icon" onClick={() => setOpen(true)} title="Scan barcode">
+        <ScanLine className="w-4 h-4" />
+      </Button>
+      {open && (
+        <BarcodeScannerModal
+          onClose={() => setOpen(false)}
+          onScan={(c) => {
+            setOpen(false);
+            onScan(c);
+          }}
+        />
+      )}
+    </>
   );
 }
