@@ -1,11 +1,14 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import {
   Product, Customer, Vendor, PurchaseOrder, LedgerEntry,
   Invoice, CartItem, StoreSettings,
 } from '@/types';
 import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from './customization';
+import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
+import { importSchema } from '@/lib/importSchema';
 
-interface AdminCreds { username: string; password: string; }
+// Stored shape — password is ALWAYS a SHA-256 hex digest, never plaintext.
+interface StoredAdminCreds { username: string; passwordHash: string; }
 
 interface StoreState {
   products: Product[];
@@ -19,7 +22,10 @@ interface StoreState {
   theme: ThemeSettings;
   prefs: AppPreferences;
   categories: string[];
-  adminCreds: AdminCreds;
+  // Only the username and a "is default password" flag are exposed.
+  // The password hash is intentionally NOT part of the context surface.
+  adminUsername: string;
+  isDefaultAdminPassword: boolean;
   isAdmin: boolean;
   t: (typeof T)['my'];
 
@@ -52,12 +58,12 @@ interface StoreState {
   updateTheme: (t: Partial<ThemeSettings>) => void;
   updatePrefs: (p: Partial<AppPreferences>) => void;
   setCategories: (c: string[]) => void;
-  updateAdminCreds: (c: AdminCreds) => void;
-  loginAdmin: (u: string, p: string) => boolean;
+  updateAdminCreds: (c: { username: string; password: string }) => Promise<void>;
+  loginAdmin: (u: string, p: string) => Promise<boolean>;
   logoutAdmin: () => void;
 
   exportData: () => void;
-  importData: (json: string) => boolean;
+  importData: (json: string) => { ok: boolean; error?: string };
   resetAll: () => void;
 
   formatPrice: (n: number) => string;
@@ -93,18 +99,35 @@ const defaultState = {
   theme: DEFAULT_THEME,
   prefs: DEFAULT_PREFS,
   categories: DEFAULT_CATEGORIES,
-  adminCreds: { username: 'admin', password: 'admin' } as AdminCreds,
+  // Default password is 'admin' — stored as its SHA-256 hash, never plaintext.
+  adminCreds: { username: 'admin', passwordHash: DEFAULT_ADMIN_PASSWORD_HASH } as StoredAdminCreds,
 };
 
 const StoreContext = createContext<StoreState | null>(null);
 const uid = () => Math.random().toString(36).slice(2, 10);
+
+function migrateCreds(parsed: any): StoredAdminCreds {
+  // Migrate legacy plaintext creds: { username, password } -> { username, passwordHash }
+  const c = parsed?.adminCreds;
+  if (c && typeof c.passwordHash === 'string') {
+    return { username: String(c.username || 'admin'), passwordHash: c.passwordHash };
+  }
+  if (c && typeof c.password === 'string') {
+    // Legacy users had plaintext stored — fall back to default hash and force change.
+    return { username: String(c.username || 'admin'), passwordHash: DEFAULT_ADMIN_PASSWORD_HASH };
+  }
+  return defaultState.adminCreds;
+}
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
-    return { ...defaultState, ...parsed,
+    return {
+      ...defaultState,
+      ...parsed,
+      adminCreds: migrateCreds(parsed),
       theme: { ...DEFAULT_THEME, ...(parsed.theme || {}) },
       prefs: { ...DEFAULT_PREFS, ...(parsed.prefs || {}) },
     };
@@ -124,13 +147,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemeSettings>(initial.theme);
   const [prefs, setPrefs] = useState<AppPreferences>(initial.prefs);
   const [categories, setCategoriesState] = useState<string[]>(initial.categories);
-  const [adminCreds, setAdminCreds] = useState<AdminCreds>(initial.adminCreds);
+  const [adminCreds, setAdminCreds] = useState<StoredAdminCreds>(initial.adminCreds);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // Persist
+  // Persist (note: only the password HASH is ever written, never plaintext)
   useEffect(() => {
     const data = { products, customers, vendors, purchases, ledger, invoices, cart, settings, theme, prefs, categories, adminCreds };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* quota or privacy mode */ }
   }, [products, customers, vendors, purchases, ledger, invoices, cart, settings, theme, prefs, categories, adminCreds]);
 
   // Apply theme to CSS variables
@@ -165,7 +188,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreState = {
     products, customers, vendors, purchases, ledger, invoices, cart, settings,
-    theme, prefs, categories, adminCreds, isAdmin, t,
+    theme, prefs, categories,
+    adminUsername: adminCreds.username,
+    isDefaultAdminPassword: adminCreds.passwordHash === DEFAULT_ADMIN_PASSWORD_HASH,
+    isAdmin, t,
     setProducts,
     upsertProduct: upsert(setProducts),
     deleteProduct: remove(setProducts),
@@ -204,15 +230,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateTheme: (s) => setTheme((prev) => ({ ...prev, ...s })),
     updatePrefs: (s) => setPrefs((prev) => ({ ...prev, ...s })),
     setCategories: (c) => setCategoriesState(c),
-    updateAdminCreds: (c) => setAdminCreds(c),
-    loginAdmin: (u, p) => {
-      if (u === adminCreds.username && p === adminCreds.password) { setIsAdmin(true); return true; }
+    updateAdminCreds: async (c) => {
+      const passwordHash = await sha256(c.password);
+      setAdminCreds({ username: c.username, passwordHash });
+    },
+    loginAdmin: async (u, p) => {
+      const hash = await sha256(p);
+      if (u === adminCreds.username && hash === adminCreds.passwordHash) {
+        setIsAdmin(true);
+        return true;
+      }
       return false;
     },
     logoutAdmin: () => setIsAdmin(false),
 
     exportData: () => {
-      const data = { products, customers, vendors, purchases, ledger, invoices, settings, theme, prefs, categories, adminCreds, exportedAt: new Date().toISOString(), version: 2 };
+      // Backup payload deliberately EXCLUDES adminCreds — credentials must never
+      // travel in a JSON file that could be intercepted, shared, or reimported
+      // to overwrite another device's login.
+      const data = { products, customers, vendors, purchases, ledger, invoices, settings, theme, prefs, categories, exportedAt: new Date().toISOString(), version: 3 };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -222,21 +258,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       URL.revokeObjectURL(url);
     },
     importData: (json) => {
-      try {
-        const d = JSON.parse(json);
-        if (d.products) setProducts(d.products);
-        if (d.customers) setCustomers(d.customers);
-        if (d.vendors) setVendors(d.vendors);
-        if (d.purchases) setPurchases(d.purchases);
-        if (d.ledger) setLedger(d.ledger);
-        if (d.invoices) setInvoices(d.invoices);
-        if (d.settings) setSettings(d.settings);
-        if (d.theme) setTheme({ ...DEFAULT_THEME, ...d.theme });
-        if (d.prefs) setPrefs({ ...DEFAULT_PREFS, ...d.prefs });
-        if (d.categories) setCategoriesState(d.categories);
-        if (d.adminCreds) setAdminCreds(d.adminCreds);
-        return true;
-      } catch { return false; }
+      let parsed: unknown;
+      try { parsed = JSON.parse(json); } catch { return { ok: false, error: 'File is not valid JSON.' }; }
+      const result = importSchema.safeParse(parsed);
+      if (!result.success) {
+        return { ok: false, error: 'Backup file failed validation and was rejected.' };
+      }
+      const d = result.data;
+      // adminCreds is never accepted from imports — schema strips it.
+      if (d.products) setProducts(d.products as unknown as Product[]);
+      if (d.customers) setCustomers(d.customers as unknown as Customer[]);
+      if (d.vendors) setVendors(d.vendors as unknown as Vendor[]);
+      if (d.purchases) setPurchases(d.purchases as unknown as PurchaseOrder[]);
+      if (d.ledger) setLedger(d.ledger as unknown as LedgerEntry[]);
+      if (d.invoices) setInvoices(d.invoices as unknown as Invoice[]);
+      if (d.settings) setSettings((prev) => ({ ...prev, ...d.settings }));
+      if (d.theme) setTheme((prev) => ({ ...prev, ...(d.theme as Partial<ThemeSettings>) }));
+      if (d.prefs) setPrefs((prev) => ({ ...prev, ...(d.prefs as Partial<AppPreferences>) }));
+      if (d.categories) setCategoriesState(d.categories);
+      return { ok: true };
     },
     resetAll: () => {
       if (confirm('Reset ALL data? This cannot be undone.')) {

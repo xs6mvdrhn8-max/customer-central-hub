@@ -41,10 +41,21 @@ export function CustomizationAdmin() {
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    // 5 MB cap — guards against accidental huge files
+    if (f.size > 5 * 1024 * 1024) {
+      toast.error('Backup file is too large (max 5 MB)');
+      e.target.value = '';
+      return;
+    }
+    if (!confirm('Importing will overwrite store data, settings, theme, and categories on this device. Admin login is preserved. Continue?')) {
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      const ok = importData(String(reader.result));
-      ok ? toast.success('Data restored') : toast.error('Invalid backup file');
+      const result = importData(String(reader.result));
+      if (result.ok) toast.success('Data restored');
+      else toast.error(result.error || 'Invalid backup file');
     };
     reader.readAsText(f);
     e.target.value = '';
