@@ -103,6 +103,28 @@ export function PurchasesAdmin() {
             <Button type="button" variant="outline" onClick={() => setForm(empty)}>Reset</Button>
           </div>
         </form>
+
+        {scanLineIdx !== null && (
+          <BarcodeScannerModal
+            onClose={() => setScanLineIdx(null)}
+            onScan={(code) => {
+              const idx = scanLineIdx;
+              setScanLineIdx(null);
+              if (idx === null) return;
+              const hit = products.find((p) => (p.barcode || '').trim() === code.trim());
+              setForm((f) => {
+                const lines = [...f.lines];
+                lines[idx] = {
+                  ...lines[idx],
+                  itemName: hit ? hit.name : code,
+                  cost: hit && !lines[idx].cost ? hit.cost : lines[idx].cost,
+                };
+                return { ...f, lines };
+              });
+              toast.success(hit ? `Matched: ${hit.name}` : `Scanned: ${code}`);
+            }}
+          />
+        )}
       </Card>
 
       <Card className="p-4">
@@ -110,9 +132,13 @@ export function PurchasesAdmin() {
         {purchases.length === 0 ? (
           <p className="text-sm text-muted-foreground">No purchase orders.</p>
         ) : (
-          <div className="space-y-2">
-            {purchases.map((p) => (
-              <div key={p.id} className="p-3 rounded-md bg-muted/40">
+          <SortableList
+            className="space-y-2"
+            items={purchases}
+            getId={(p) => p.id}
+            onReorder={reorderPurchases}
+            renderItem={(p) => (
+              <div className="p-3 rounded-md bg-muted/40">
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium text-sm">{p.vendorName}</p>
@@ -128,8 +154,8 @@ export function PurchasesAdmin() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          />
         )}
       </Card>
     </div>
