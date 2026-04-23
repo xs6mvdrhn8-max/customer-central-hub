@@ -21,9 +21,13 @@ export function InvoicesView() {
       {invoices.length === 0 ? (
         <p className="text-sm text-muted-foreground">No invoices yet.</p>
       ) : (
-        <div className="space-y-3">
-          {invoices.map((inv) => (
-            <Card key={inv.id} className="p-4 bg-muted/30">
+        <SortableList
+          className="space-y-3"
+          items={invoices}
+          getId={(inv) => inv.id}
+          onReorder={reorderInvoices}
+          renderItem={(inv) => (
+            <Card className="p-4 bg-muted/30">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-semibold">{inv.customerName}</p>
@@ -52,8 +56,8 @@ export function InvoicesView() {
                 </Button>
               </div>
             </Card>
-          ))}
-        </div>
+          )}
+        />
       )}
     </Card>
   );
