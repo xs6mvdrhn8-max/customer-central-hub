@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Plus, X, Download, Upload, RotateCcw, Palette } from 'lucide-react';
+import { SortableList } from '@/components/SortableList';
 import { toast } from 'sonner';
 
 const FONTS_DISPLAY = ['Playfair Display', 'DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
@@ -199,18 +200,31 @@ export function CustomizationAdmin() {
 
       {/* CATEGORIES */}
       <Card className="p-5">
-        <h4 className="font-semibold mb-3">Custom Categories</h4>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {categories.map((c) => (
-            <Badge key={c} variant="secondary" className="pl-3 pr-1 py-1 gap-1">
-              {c}
-              <button onClick={() => removeCat(c)} className="ml-1 hover:bg-destructive/20 rounded p-0.5">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
-          {categories.length === 0 && <p className="text-sm text-muted-foreground">No categories yet.</p>}
-        </div>
+        <h4 className="font-semibold mb-1">Custom Categories</h4>
+        <p className="text-xs text-muted-foreground mb-3">Drag handle ဖြင့် အစီအစဉ် ပြောင်းနိုင်ပါတယ်</p>
+        {categories.length === 0 ? (
+          <p className="text-sm text-muted-foreground mb-3">No categories yet.</p>
+        ) : (
+          <SortableList
+            className="space-y-1.5 mb-3"
+            items={categories}
+            getId={(c) => c}
+            onReorder={setCategories}
+            renderItem={(c) => (
+              <div className="flex items-center justify-between px-3 py-2 rounded-md bg-muted/50">
+                <span className="text-sm">{c}</span>
+                <button
+                  type="button"
+                  onClick={() => removeCat(c)}
+                  className="hover:bg-destructive/20 rounded p-1 text-muted-foreground hover:text-destructive"
+                  aria-label={`Remove ${c}`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          />
+        )}
         <form onSubmit={(e) => { e.preventDefault(); addCat(); }} className="flex gap-2">
           <Input placeholder="Category name (e.g. Garden Tools)" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
           <Button type="submit" size="sm">
