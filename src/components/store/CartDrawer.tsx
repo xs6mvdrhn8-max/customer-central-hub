@@ -5,19 +5,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Trash2, Minus, Plus } from 'lucide-react';
+import { Trash2, Minus, Plus, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
 
 export function CartDrawer() {
   const [open, setOpen] = useState(false);
-  const { cart, updateCartQty, removeFromCart, clearCart, customers, saveInvoice, formatPrice } = useStore();
+  const { cart, updateCartQty, removeFromCart, clearCart, customers, products, addToCart, saveInvoice, formatPrice } = useStore();
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [paid, setPaid] = useState(0);
   const [saleType, setSaleType] = useState<'cash' | 'credit'>('cash');
   const [note, setNote] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [scanOpen, setScanOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setOpen(true);
@@ -73,9 +75,26 @@ export function CartDrawer() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <SheetTitle>Shopping Cart</SheetTitle>
+          <Button type="button" size="sm" variant="outline" onClick={() => setScanOpen(true)}>
+            <ScanLine className="w-4 h-4 mr-1" /> Scan
+          </Button>
         </SheetHeader>
+
+        {scanOpen && (
+          <BarcodeScannerModal
+            onClose={() => setScanOpen(false)}
+            onScan={(code) => {
+              setScanOpen(false);
+              const hit = products.find((p) => (p.barcode || '').trim() === code.trim());
+              if (!hit) return toast.error(`Barcode "${code}" မတွေ့ပါ`);
+              if (hit.stock <= 0) return toast.error(`${hit.name} လက်ကျန်မရှိပါ`);
+              addToCart(hit);
+              toast.success(`${hit.name} ထည့်လိုက်ပါပြီ`);
+            }}
+          />
+        )}
 
         <div className="mt-4 space-y-2">
           {cart.length === 0 ? (
