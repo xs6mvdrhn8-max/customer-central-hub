@@ -1,11 +1,10 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, Search, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { BarcodeInput } from '@/components/BarcodeInput';
 import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
 
 export function ShopView() {
