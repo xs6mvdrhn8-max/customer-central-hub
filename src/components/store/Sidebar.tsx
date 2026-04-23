@@ -8,27 +8,31 @@ interface Props {
   onChange: (v: ViewName) => void;
 }
 
-const items: { id: ViewName; label: string; icon: typeof Package }[] = [
-  { id: 'overview', label: 'Overview', icon: Store },
-  { id: 'shop', label: 'Shop', icon: Package },
-  { id: 'invoices', label: 'Sales Invoices', icon: FileText },
-  { id: 'admin', label: 'Admin Panel', icon: Shield },
-];
-
 export function Sidebar({ view, onChange }: Props) {
-  const { settings, isAdmin, cart } = useStore();
+  const { settings, isAdmin, cart, t } = useStore();
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
+
+  const items: { id: ViewName; label: string; icon: typeof Package }[] = [
+    { id: 'overview', label: t.overview, icon: Store },
+    { id: 'shop', label: t.shop, icon: Package },
+    { id: 'invoices', label: t.invoices, icon: FileText },
+    { id: 'admin', label: t.admin, icon: Shield },
+  ];
 
   return (
     <aside className="w-64 shrink-0 bg-sidebar text-sidebar-foreground flex flex-col h-screen sticky top-0">
       <div className="p-5 border-b border-sidebar-hover">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-sidebar-active flex items-center justify-center font-bold text-primary-foreground">
-            PT
-          </div>
-          <div>
+          {settings.logoImageUrl ? (
+            <img src={settings.logoImageUrl} alt="logo" className="w-10 h-10 rounded-lg object-cover" />
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-sidebar-active flex items-center justify-center font-bold text-primary-foreground font-display">
+              PT
+            </div>
+          )}
+          <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider opacity-60">Offline Store</p>
-            <h1 className="font-semibold text-sm leading-tight">{settings.storeName}</h1>
+            <h1 className="font-display font-semibold text-sm leading-tight truncate">{settings.storeName}</h1>
           </div>
         </div>
       </div>
@@ -43,9 +47,7 @@ export function Sidebar({ view, onChange }: Props) {
               onClick={() => onChange(it.id)}
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                active
-                  ? 'bg-sidebar-active text-primary-foreground'
-                  : 'hover:bg-sidebar-hover'
+                active ? 'bg-sidebar-active text-primary-foreground' : 'hover:bg-sidebar-hover'
               )}
             >
               <Icon className="w-4 h-4" />
@@ -68,13 +70,10 @@ export function Sidebar({ view, onChange }: Props) {
           </span>
         </div>
         <button
-          onClick={() => {
-            const ev = new CustomEvent('open-cart');
-            window.dispatchEvent(ev);
-          }}
+          onClick={() => window.dispatchEvent(new CustomEvent('open-cart'))}
           className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-sidebar-active text-primary-foreground text-sm font-medium hover:opacity-90"
         >
-          <span className="flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Cart</span>
+          <span className="flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> {t.cart}</span>
           <span className="bg-black/20 px-2 py-0.5 rounded text-xs">{cartCount}</span>
         </button>
       </div>
