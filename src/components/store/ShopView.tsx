@@ -17,7 +17,7 @@ export function ShopView() {
 
   const filtered = products.filter((p) => {
     const q = search.toLowerCase();
-    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q);
+    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
     const matchesC = category === 'all' || category === allLabel || p.category === category;
     return matchesQ && matchesC;
   });
