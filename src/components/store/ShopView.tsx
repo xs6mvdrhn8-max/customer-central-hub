@@ -154,6 +154,3 @@ function BarcodeScanButton({ onScan }: { onScan: (code: string) => void }) {
     </>
   );
 }
-
-import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
-
