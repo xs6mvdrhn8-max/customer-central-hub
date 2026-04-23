@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SortableList } from '@/components/SortableList';
 
 const empty: Vendor = { id: '', name: '', phone: '', note: '' };
 
 export function VendorsAdmin() {
-  const { vendors, upsertVendor, deleteVendor } = useStore();
+  const { vendors, upsertVendor, deleteVendor, reorderVendors } = useStore();
   const [form, setForm] = useState<Vendor>(empty);
 
   const submit = (e: React.FormEvent) => {
@@ -39,10 +40,14 @@ export function VendorsAdmin() {
 
       <Card className="p-4">
         <h4 className="font-semibold mb-3">Vendors ({vendors.length})</h4>
-        <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
-          {vendors.map((v) => (
-            <div key={v.id} className="flex items-center justify-between p-3 rounded-md bg-muted/40">
-              <div>
+        <SortableList
+          className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1"
+          items={vendors}
+          getId={(v) => v.id}
+          onReorder={reorderVendors}
+          renderItem={(v) => (
+            <div className="flex items-center justify-between p-3 rounded-md bg-muted/40">
+              <div className="min-w-0">
                 <p className="font-medium text-sm">{v.name}</p>
                 <p className="text-xs text-muted-foreground">{v.phone} {v.note && `· ${v.note}`}</p>
               </div>
@@ -55,8 +60,8 @@ export function VendorsAdmin() {
                 </Button>
               </div>
             </div>
-          ))}
-        </div>
+          )}
+        />
       </Card>
     </div>
   );
