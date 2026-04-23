@@ -2,9 +2,10 @@ import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
+import { SortableList } from '@/components/SortableList';
 
 export function InvoicesView() {
-  const { invoices, deleteInvoice, clearInvoices, formatPrice } = useStore();
+  const { invoices, deleteInvoice, clearInvoices, reorderInvoices, formatPrice } = useStore();
 
   return (
     <Card className="p-6">
