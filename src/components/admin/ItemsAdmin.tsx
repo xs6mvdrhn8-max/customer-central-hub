@@ -103,3 +103,45 @@ export function ItemsAdmin() {
     </div>
   );
 }
+
+function ItemRow({
+  p,
+  formatPrice,
+  onEdit,
+  onDelete,
+}: {
+  p: Product;
+  formatPrice: (n: number) => string;
+  onEdit: (p: Product) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 rounded-md bg-muted/40 hover:bg-muted">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-sm truncate">{p.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {p.category} · Stock: {p.stock} · {formatPrice(p.price)}
+          {p.barcode ? ` · ⌗ ${p.barcode}` : ''}
+        </p>
+      </div>
+      <div className="flex gap-1">
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onEdit(p)}>
+          <Pencil className="w-3.5 h-3.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 text-destructive"
+          onClick={() => {
+            if (confirm(`Delete ${p.name}?`)) {
+              onDelete(p.id);
+              toast.success('Item deleted');
+            }
+          }}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
