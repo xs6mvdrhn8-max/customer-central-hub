@@ -58,7 +58,7 @@ function StoreApp() {
         </header>
 
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          {view === 'overview' && <OverviewView />}
+          {view === 'overview' && <OverviewView onNavigate={(v) => setView(v)} />}
           {view === 'shop' && <ShopView />}
           {view === 'invoices' && <InvoicesView />}
           {view === 'admin' && <AdminView />}
