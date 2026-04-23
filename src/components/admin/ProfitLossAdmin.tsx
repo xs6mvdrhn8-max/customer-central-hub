@@ -15,7 +15,7 @@ function today() {
 }
 
 export function ProfitLossAdmin() {
-  const { invoices, purchases, ledger } = useStore();
+  const { invoices, purchases, ledger, formatPrice } = useStore();
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
@@ -82,10 +82,10 @@ export function ProfitLossAdmin() {
   }, [from, to, invoices, purchases, ledger]);
 
   const stats = [
-    { label: 'Total Sales', value: `${data.totalSales.toLocaleString()} Ks`, icon: DollarSign, tone: 'text-primary bg-primary/10' },
-    { label: 'COGS', value: `${data.totalCOGS.toLocaleString()} Ks`, icon: Package, tone: 'text-warning-foreground bg-warning/10' },
-    { label: 'Gross Profit', value: `${data.grossProfit.toLocaleString()} Ks`, icon: data.grossProfit >= 0 ? TrendingUp : TrendingDown, tone: data.grossProfit >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10' },
-    { label: 'Margin', value: `${data.margin.toFixed(1)}%`, icon: TrendingUp, tone: 'text-accent bg-accent/10' },
+    { label: 'Total Sales', value: formatPrice(data.totalSales), icon: DollarSign, tone: 'text-primary bg-primary/10' },
+    { label: 'COGS', value: formatPrice(data.totalCOGS), icon: Package, tone: 'text-warning-foreground bg-warning/10' },
+    { label: 'Gross Profit', value: formatPrice(data.grossProfit), icon: data.grossProfit >= 0 ? TrendingUp : TrendingDown, tone: data.grossProfit >= 0 ? 'text-success bg-success/10' : 'text-destructive bg-destructive/10' },
+    { label: 'Margin', value: `${data.margin.toFixed(1)}%`, icon: TrendingUp, tone: 'text-accent-foreground bg-accent' },
   ];
 
   const maxMonthly = Math.max(...data.monthlyArr.map((m) => m[1].sales), 1);
@@ -134,11 +134,11 @@ export function ProfitLossAdmin() {
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Purchases</p>
-          <p className="text-xl font-bold mt-1">{data.totalPurchases.toLocaleString()} Ks</p>
+          <p className="text-xl font-bold mt-1">{formatPrice(data.totalPurchases)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Net (Receivable - Payable)</p>
-          <p className="text-xl font-bold mt-1">{(data.totalReceivable - data.totalPayable).toLocaleString()} Ks</p>
+          <p className="text-xl font-bold mt-1">{formatPrice(data.totalReceivable - data.totalPayable)}</p>
         </Card>
       </div>
 
@@ -153,7 +153,7 @@ export function ProfitLossAdmin() {
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="font-medium">{m}</span>
                   <span className="text-muted-foreground">
-                    Sales: {v.sales.toLocaleString()} · Profit: {(v.sales - v.cost).toLocaleString()} Ks
+                    Sales: {formatPrice(v.sales)} · Profit: {formatPrice(v.sales - v.cost)}
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">

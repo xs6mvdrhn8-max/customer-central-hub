@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 
 export function CartDrawer() {
   const [open, setOpen] = useState(false);
-  const { cart, updateCartQty, removeFromCart, clearCart, customers, saveInvoice } = useStore();
+  const { cart, updateCartQty, removeFromCart, clearCart, customers, saveInvoice, formatPrice } = useStore();
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [paid, setPaid] = useState(0);
@@ -85,7 +85,7 @@ export function CartDrawer() {
               <Card key={c.product.id} className="p-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{c.product.name}</p>
-                  <p className="text-xs text-muted-foreground">{c.product.price.toLocaleString()} Ks</p>
+                  <p className="text-xs text-muted-foreground">{formatPrice(c.product.price)}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => updateCartQty(c.product.id, c.qty - 1)}>
@@ -106,7 +106,7 @@ export function CartDrawer() {
 
         <div className="mt-4 p-3 rounded-lg bg-muted space-y-1 text-sm">
           <div className="flex justify-between"><span>Items</span><strong>{totalItems}</strong></div>
-          <div className="flex justify-between"><span>Total</span><strong className="text-primary">{total.toLocaleString()} Ks</strong></div>
+          <div className="flex justify-between"><span>Total</span><strong className="text-primary">{formatPrice(total)}</strong></div>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
