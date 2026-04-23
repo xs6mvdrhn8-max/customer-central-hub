@@ -3,13 +3,13 @@ import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { AlertTriangle } from 'lucide-react';
 
 export function SettingsAdmin() {
-  const { settings, updateSettings, adminCreds, updateAdminCreds, logoutAdmin } = useStore();
+  const { settings, updateSettings, adminUsername, isDefaultAdminPassword, updateAdminCreds, logoutAdmin } = useStore();
   const [s, setS] = useState(settings);
-  const [creds, setCreds] = useState({ username: adminCreds.username, password: '' });
+  const [creds, setCreds] = useState({ username: adminUsername, password: '', confirm: '' });
 
   const saveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,12 +17,14 @@ export function SettingsAdmin() {
     toast.success('Settings saved');
   };
 
-  const saveCreds = (e: React.FormEvent) => {
+  const saveCreds = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!creds.username || !creds.password) return toast.error('Both required');
-    updateAdminCreds(creds);
+    if (!creds.username.trim() || !creds.password) return toast.error('Both required');
+    if (creds.password.length < 8) return toast.error('Password must be at least 8 characters');
+    if (creds.password !== creds.confirm) return toast.error('Passwords do not match');
+    await updateAdminCreds({ username: creds.username.trim(), password: creds.password });
     toast.success('Admin login updated');
-    setCreds({ username: creds.username, password: '' });
+    setCreds({ username: creds.username.trim(), password: '', confirm: '' });
   };
 
   return (
@@ -42,9 +44,16 @@ export function SettingsAdmin() {
 
       <Card className="p-4">
         <h4 className="font-semibold mb-3">Admin Credentials</h4>
+        {isDefaultAdminPassword && (
+          <div className="flex gap-2 items-start p-3 mb-3 rounded-md bg-destructive/10 text-destructive text-sm">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>You are still using the default password. Please change it now to secure this device.</span>
+          </div>
+        )}
         <form onSubmit={saveCreds} className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Input placeholder="New Username" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} required />
-          <Input type="password" placeholder="New Password" value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} required />
+          <Input placeholder="New Username" value={creds.username} onChange={(e) => setCreds({ ...creds, username: e.target.value })} required maxLength={60} />
+          <Input type="password" placeholder="New Password (min 8 chars)" value={creds.password} onChange={(e) => setCreds({ ...creds, password: e.target.value })} required minLength={8} maxLength={200} />
+          <Input type="password" placeholder="Confirm Password" value={creds.confirm} onChange={(e) => setCreds({ ...creds, confirm: e.target.value })} required minLength={8} maxLength={200} className="md:col-span-2" />
           <div className="md:col-span-2 flex gap-2">
             <Button type="submit">Update Admin Login</Button>
             <Button type="button" variant="outline" onClick={logoutAdmin}>Logout</Button>

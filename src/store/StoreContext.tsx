@@ -266,15 +266,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       const d = result.data;
       // adminCreds is never accepted from imports — schema strips it.
-      if (d.products) setProducts(d.products as Product[]);
-      if (d.customers) setCustomers(d.customers as Customer[]);
-      if (d.vendors) setVendors(d.vendors as Vendor[]);
-      if (d.purchases) setPurchases(d.purchases as PurchaseOrder[]);
-      if (d.ledger) setLedger(d.ledger as LedgerEntry[]);
-      if (d.invoices) setInvoices(d.invoices as Invoice[]);
+      if (d.products) setProducts(d.products as unknown as Product[]);
+      if (d.customers) setCustomers(d.customers as unknown as Customer[]);
+      if (d.vendors) setVendors(d.vendors as unknown as Vendor[]);
+      if (d.purchases) setPurchases(d.purchases as unknown as PurchaseOrder[]);
+      if (d.ledger) setLedger(d.ledger as unknown as LedgerEntry[]);
+      if (d.invoices) setInvoices(d.invoices as unknown as Invoice[]);
       if (d.settings) setSettings((prev) => ({ ...prev, ...d.settings }));
-      if (d.theme) setTheme((prev) => ({ ...prev, ...d.theme }));
-      if (d.prefs) setPrefs((prev) => ({ ...prev, ...d.prefs }));
+      if (d.theme) setTheme((prev) => ({ ...prev, ...(d.theme as Partial<ThemeSettings>) }));
+      if (d.prefs) setPrefs((prev) => ({ ...prev, ...(d.prefs as Partial<AppPreferences>) }));
       if (d.categories) setCategoriesState(d.categories);
       return { ok: true };
     },
