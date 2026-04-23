@@ -133,3 +133,26 @@ export function ShopView() {
     </div>
   );
 }
+
+function BarcodeScanButton({ onScan }: { onScan: (code: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button type="button" variant="outline" size="icon" onClick={() => setOpen(true)} title="Scan barcode">
+        <ScanLine className="w-4 h-4" />
+      </Button>
+      {open && (
+        <BarcodeScannerModal
+          onClose={() => setOpen(false)}
+          onScan={(c) => {
+            setOpen(false);
+            onScan(c);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
+
