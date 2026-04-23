@@ -14,7 +14,7 @@ const empty: Product = {
 };
 
 export function ItemsAdmin() {
-  const { products, vendors, upsertProduct, deleteProduct } = useStore();
+  const { products, vendors, categories, upsertProduct, deleteProduct, formatPrice } = useStore();
   const [form, setForm] = useState<Product>(empty);
   const [search, setSearch] = useState('');
 
@@ -42,7 +42,15 @@ export function ItemsAdmin() {
         <h4 className="font-semibold mb-3">{form.id ? 'Edit Item' : 'Add New Item'}</h4>
         <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Input placeholder="Item Name *" value={form.name} onChange={(e) => set('name', e.target.value)} required />
-          <Input placeholder="Category *" value={form.category} onChange={(e) => set('category', e.target.value)} required />
+          <select
+            className="h-10 px-3 rounded-md border bg-background text-sm"
+            value={form.category}
+            onChange={(e) => set('category', e.target.value)}
+            required
+          >
+            <option value="">Select category *</option>
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
           <Input type="number" placeholder="Sale Price" value={form.price || ''} onChange={(e) => set('price', Number(e.target.value))} />
           <Input type="number" placeholder="Cost" value={form.cost || ''} onChange={(e) => set('cost', Number(e.target.value))} />
           <Input type="number" placeholder="Stock Qty" value={form.stock || ''} onChange={(e) => set('stock', Number(e.target.value))} />
@@ -78,7 +86,7 @@ export function ItemsAdmin() {
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{p.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {p.category} · Stock: {p.stock} · {p.price.toLocaleString()} Ks
+                  {p.category} · Stock: {p.stock} · {formatPrice(p.price)}
                 </p>
               </div>
               <div className="flex gap-1">

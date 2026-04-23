@@ -14,7 +14,7 @@ const empty: PurchaseOrder = {
 };
 
 export function PurchasesAdmin() {
-  const { purchases, vendors, upsertPurchase, deletePurchase } = useStore();
+  const { purchases, vendors, upsertPurchase, deletePurchase, formatPrice } = useStore();
   const [form, setForm] = useState<PurchaseOrder>(empty);
 
   const updateLine = (i: number, k: keyof PurchaseLine, v: any) => {
@@ -108,7 +108,7 @@ export function PurchasesAdmin() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-medium text-sm">{p.vendorName}</p>
-                    <p className="text-xs text-muted-foreground">{p.orderDate} · {p.status} · {p.lines.length} items · {totalAmount(p).toLocaleString()} Ks</p>
+                    <p className="text-xs text-muted-foreground">{p.orderDate} · {p.status} · {p.lines.length} items · {formatPrice(totalAmount(p))}</p>
                   </div>
                   <div className="flex gap-1">
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setForm(p)}>

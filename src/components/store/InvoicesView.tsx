@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 
 export function InvoicesView() {
-  const { invoices, deleteInvoice, clearInvoices } = useStore();
+  const { invoices, deleteInvoice, clearInvoices, formatPrice } = useStore();
 
   return (
     <Card className="p-6">
@@ -33,15 +33,15 @@ export function InvoicesView() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-primary">{inv.total.toLocaleString()} Ks</p>
-                  <p className="text-xs text-muted-foreground">Paid: {inv.paidAmount.toLocaleString()}</p>
+                  <p className="font-bold text-primary">{formatPrice(inv.total)}</p>
+                  <p className="text-xs text-muted-foreground">Paid: {formatPrice(inv.paidAmount)}</p>
                 </div>
               </div>
               <div className="mt-3 text-sm">
                 {inv.lines.map((l, i) => (
                   <div key={i} className="flex justify-between py-1 border-t first:border-t-0">
                     <span>{l.productName} × {l.qty}</span>
-                    <span>{(l.price * l.qty).toLocaleString()} Ks</span>
+                    <span>{formatPrice(l.price * l.qty)}</span>
                   </div>
                 ))}
               </div>

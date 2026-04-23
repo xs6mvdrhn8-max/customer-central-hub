@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 const empty: LedgerEntry = { id: '', type: 'receivable', name: '', vendorId: '', amount: 0, dueDate: '', note: '' };
 
 export function LedgerAdmin() {
-  const { ledger, vendors, upsertLedger, deleteLedger } = useStore();
+  const { ledger, vendors, upsertLedger, deleteLedger, formatPrice } = useStore();
   const [form, setForm] = useState<LedgerEntry>(empty);
 
   const submit = (e: React.FormEvent) => {
@@ -31,11 +31,11 @@ export function LedgerAdmin() {
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Receivable (ရရန်)</p>
-          <p className="text-xl font-bold text-success mt-1">{totalRec.toLocaleString()} Ks</p>
+          <p className="text-xl font-bold text-success mt-1">{formatPrice(totalRec)}</p>
         </Card>
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Total Payable (ပေးရန်)</p>
-          <p className="text-xl font-bold text-destructive mt-1">{totalPay.toLocaleString()} Ks</p>
+          <p className="text-xl font-bold text-destructive mt-1">{formatPrice(totalPay)}</p>
         </Card>
       </div>
 
@@ -77,7 +77,7 @@ export function LedgerAdmin() {
                     <p className="font-medium text-sm truncate">{l.name}</p>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {l.amount.toLocaleString()} Ks {l.dueDate && `· Due: ${l.dueDate}`}
+                    {formatPrice(l.amount)} {l.dueDate && `· Due: ${l.dueDate}`}
                   </p>
                 </div>
                 <div className="flex gap-1">

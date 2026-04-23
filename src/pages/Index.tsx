@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StoreProvider } from '@/store/StoreContext';
+import { StoreProvider, useStore } from '@/store/StoreContext';
 import { Sidebar } from '@/components/store/Sidebar';
 import { OverviewView } from '@/components/store/OverviewView';
 import { ShopView } from '@/components/store/ShopView';
@@ -8,19 +8,20 @@ import { AdminView } from '@/components/store/AdminView';
 import { CartDrawer } from '@/components/store/CartDrawer';
 import { ViewName } from '@/types';
 import { Menu, ShoppingCart } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
-const titles: Record<ViewName, string> = {
-  overview: 'Overview',
-  shop: 'Shop',
-  invoices: 'Sales Invoices',
-  admin: 'Admin Panel',
-};
-
 function StoreApp() {
+  const { t } = useStore();
   const [view, setView] = useState<ViewName>('overview');
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const titles: Record<ViewName, string> = {
+    overview: t.overview,
+    shop: t.shop,
+    invoices: t.invoices,
+    admin: t.admin,
+  };
 
   const handleChange = (v: ViewName) => {
     setView(v);
@@ -29,12 +30,10 @@ function StoreApp() {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Desktop sidebar */}
       <div className="hidden md:block">
         <Sidebar view={view} onChange={handleChange} />
       </div>
 
-      {/* Mobile sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
         <SheetContent side="left" className="p-0 w-64">
           <Sidebar view={view} onChange={handleChange} />
@@ -46,7 +45,7 @@ function StoreApp() {
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-          <h2 className="font-semibold">{titles[view]}</h2>
+          <h2 className="font-display font-semibold text-lg">{titles[view]}</h2>
           <Button
             variant="outline"
             size="icon"
@@ -58,7 +57,7 @@ function StoreApp() {
         </header>
 
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          {view === 'overview' && <OverviewView />}
+          {view === 'overview' && <OverviewView onNavigate={(v) => setView(v)} />}
           {view === 'shop' && <ShopView />}
           {view === 'invoices' && <InvoicesView />}
           {view === 'admin' && <AdminView />}
