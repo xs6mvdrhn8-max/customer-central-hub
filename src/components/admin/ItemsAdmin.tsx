@@ -5,10 +5,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Printer, Download, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeInput } from '@/components/BarcodeInput';
 import { SortableList } from '@/components/SortableList';
+import { printHtml, escapeHtml } from '@/lib/print';
+import { downloadCsv, parseCsv, pickFile, toCsv } from '@/lib/csv';
+
+const ITEM_CSV_HEADERS = [
+  'name', 'category', 'price', 'originalPrice', 'cost', 'stock',
+  'reorderLevel', 'barcode', 'sku', 'location', 'description', 'badge',
+];
 
 const empty: Product = {
   id: '', name: '', category: '', price: 0, cost: 0, stock: 0, reorderLevel: 0,
