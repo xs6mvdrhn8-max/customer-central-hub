@@ -5,10 +5,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Printer, Download, Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeInput } from '@/components/BarcodeInput';
 import { SortableList } from '@/components/SortableList';
+import { printHtml, escapeHtml } from '@/lib/print';
+import { downloadCsv, parseCsv, pickFile, toCsv } from '@/lib/csv';
+
+const ITEM_CSV_HEADERS = [
+  'name', 'category', 'price', 'originalPrice', 'cost', 'stock',
+  'reorderLevel', 'barcode', 'sku', 'location', 'description', 'badge',
+];
 
 const empty: Product = {
   id: '', name: '', category: '', price: 0, cost: 0, stock: 0, reorderLevel: 0,
@@ -16,7 +23,7 @@ const empty: Product = {
 };
 
 export function ItemsAdmin() {
-  const { products, vendors, categories, upsertProduct, deleteProduct, setProducts, formatPrice } = useStore();
+  const { products, vendors, categories, upsertProduct, deleteProduct, setProducts, formatPrice, settings } = useStore();
   const [form, setForm] = useState<Product>(empty);
   const [search, setSearch] = useState('');
 
@@ -37,6 +44,109 @@ export function ItemsAdmin() {
     const q = search.toLowerCase();
     return !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
   });
+
+  const printList = () => {
+    const list = filtered;
+    if (list.length === 0) return toast.error('No items to print');
+    const rows = list
+      .map(
+        (p, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(p.name)}${p.sku ? `<br/><span class="muted">SKU: ${escapeHtml(p.sku)}</span>` : ''}</td>
+          <td>${escapeHtml(p.category)}</td>
+          <td>${escapeHtml(p.barcode || '')}</td>
+          <td class="right">${p.stock}</td>
+          <td class="right">${formatPrice(p.cost)}</td>
+          <td class="right">${formatPrice(p.price)}</td>
+        </tr>`,
+      )
+      .join('');
+    const body = `
+      <h2>Items List</h2>
+      <p class="muted">${list.length} items${search ? ` · filter: "${escapeHtml(search)}"` : ''}</p>
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Barcode</th><th class="right">Stock</th><th class="right">Cost</th><th class="right">Price</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+    printHtml(body, 'Items List', {
+      storeName: settings.storeName,
+      storeNote: settings.storeNote,
+      logoUrl: settings.logoImageUrl,
+    });
+  };
+
+  const exportCsv = () => {
+    const rows = products.map((p) => ({
+      name: p.name, category: p.category,
+      price: p.price, originalPrice: p.originalPrice ?? '',
+      cost: p.cost, stock: p.stock, reorderLevel: p.reorderLevel,
+      barcode: p.barcode || '', sku: p.sku || '', location: p.location || '',
+      description: p.description || '', badge: p.badge || '',
+    }));
+    downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows, ITEM_CSV_HEADERS));
+    toast.success(`Exported ${rows.length} items`);
+  };
+
+  const downloadTemplate = () => {
+    downloadCsv('items-template.csv', toCsv([], ITEM_CSV_HEADERS));
+  };
+
+  const importCsv = async () => {
+    const file = await pickFile();
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) return toast.error('CSV is empty');
+      const errors: string[] = [];
+      const incoming: Product[] = [];
+      rows.forEach((r, idx) => {
+        const lineNo = idx + 2;
+        if (!r.name) { errors.push(`Row ${lineNo}: name is required`); return; }
+        if (!r.category) { errors.push(`Row ${lineNo}: category is required`); return; }
+        const num = (k: string) => r[k] === undefined || r[k] === '' ? 0 : Number(r[k]);
+        if (Number.isNaN(num('price'))) { errors.push(`Row ${lineNo}: price must be a number`); return; }
+        if (Number.isNaN(num('cost'))) { errors.push(`Row ${lineNo}: cost must be a number`); return; }
+        const matchById = r.id && products.find((p) => p.id === r.id);
+        const matchByBarcode = !matchById && r.barcode && products.find((p) => (p.barcode || '') === r.barcode);
+        const matchByName = !matchById && !matchByBarcode && products.find((p) => p.name.toLowerCase() === r.name.toLowerCase());
+        const existing = matchById || matchByBarcode || matchByName;
+        incoming.push({
+          id: existing?.id || uid(),
+          name: r.name,
+          category: r.category,
+          price: num('price'),
+          originalPrice: r.originalPrice ? num('originalPrice') : undefined,
+          cost: num('cost'),
+          stock: num('stock'),
+          reorderLevel: num('reorderLevel'),
+          barcode: r.barcode || '',
+          sku: r.sku || '',
+          location: r.location || '',
+          description: r.description || '',
+          badge: r.badge || '',
+          imageUrl: existing?.imageUrl || '',
+          vendorId: existing?.vendorId || '',
+        });
+      });
+      if (errors.length) {
+        toast.error(`${errors.length} error(s). First: ${errors[0]}`);
+        if (errors.length > 1) console.warn('CSV import errors', errors);
+        return;
+      }
+      const merged = [...products];
+      incoming.forEach((p) => {
+        const idx = merged.findIndex((x) => x.id === p.id);
+        if (idx === -1) merged.push(p); else merged[idx] = p;
+      });
+      setProducts(merged);
+      toast.success(`Imported ${incoming.length} items`);
+    } catch (err: any) {
+      toast.error(err?.message || 'CSV import failed');
+    }
+  };
+
 
   return (
     <div className="space-y-4">
@@ -80,9 +190,23 @@ export function ItemsAdmin() {
       </Card>
 
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h4 className="font-semibold">All Items ({products.length})</h4>
-          <Input placeholder="Search items..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input placeholder="Search items..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Button size="sm" variant="outline" onClick={printList}>
+              <Printer className="w-3.5 h-3.5 mr-1" /> Print
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportCsv}>
+              <Download className="w-3.5 h-3.5 mr-1" /> Export
+            </Button>
+            <Button size="sm" variant="outline" onClick={importCsv}>
+              <Upload className="w-3.5 h-3.5 mr-1" /> Import
+            </Button>
+            <Button size="sm" variant="ghost" onClick={downloadTemplate} title="Download blank CSV template">
+              <FileText className="w-3.5 h-3.5 mr-1" /> Template
+            </Button>
+          </div>
         </div>
         {search ? (
           <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">

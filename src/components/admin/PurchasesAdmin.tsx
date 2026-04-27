@@ -5,10 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Pencil, ScanLine } from 'lucide-react';
+import { Plus, Trash2, Pencil, ScanLine, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
 import { SortableList } from '@/components/SortableList';
+import { printHtml, escapeHtml } from '@/lib/print';
 
 const empty: PurchaseOrder = {
   id: '', vendorName: '', status: 'ordered', orderDate: new Date().toISOString().slice(0, 10),
@@ -16,9 +17,44 @@ const empty: PurchaseOrder = {
 };
 
 export function PurchasesAdmin() {
-  const { purchases, vendors, products, upsertPurchase, deletePurchase, reorderPurchases, formatPrice } = useStore();
+  const { purchases, vendors, products, upsertPurchase, deletePurchase, reorderPurchases, formatPrice, settings } = useStore();
   const [form, setForm] = useState<PurchaseOrder>(empty);
   const [scanLineIdx, setScanLineIdx] = useState<number | null>(null);
+
+  const printPurchase = (po: PurchaseOrder) => {
+    const lines = po.lines
+      .map(
+        (l, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(l.itemName)}</td>
+          <td class="right">${l.orderedQty}</td>
+          <td class="right">${l.receivedQty}</td>
+          <td class="right">${formatPrice(l.cost)}</td>
+          <td class="right">${formatPrice(l.orderedQty * l.cost)}</td>
+        </tr>`,
+      )
+      .join('');
+    const total = po.lines.reduce((s, l) => s + l.orderedQty * l.cost, 0);
+    const body = `
+      <h2>Purchase Order</h2>
+      <p class="muted">PO #${escapeHtml(po.id)} · ${escapeHtml(po.orderDate)}${po.expectedDate ? ` · Expected ${escapeHtml(po.expectedDate)}` : ''}</p>
+      <p><strong>Vendor:</strong> ${escapeHtml(po.vendorName)} · <span class="badge">${po.status.toUpperCase()}</span></p>
+      <table>
+        <thead><tr><th>#</th><th>Item</th><th class="right">Order Qty</th><th class="right">Recv Qty</th><th class="right">Cost</th><th class="right">Amount</th></tr></thead>
+        <tbody>${lines}</tbody>
+      </table>
+      <table class="totals">
+        <tr><td class="grand">Grand Total</td><td class="grand">${formatPrice(total)}</td></tr>
+      </table>
+      ${po.note ? `<p class="muted" style="margin-top:12px"><em>${escapeHtml(po.note)}</em></p>` : ''}
+      <div class="stamp"><div>Prepared by</div><div>Approved by</div></div>
+    `;
+    printHtml(body, `Purchase Order ${po.id}`, {
+      storeName: settings.storeName,
+      storeNote: settings.storeNote,
+      logoUrl: settings.logoImageUrl,
+    });
+  };
 
   const updateLine = (i: number, k: keyof PurchaseLine, v: any) => {
     setForm((f) => {
@@ -145,6 +181,9 @@ export function PurchasesAdmin() {
                     <p className="text-xs text-muted-foreground">{p.orderDate} · {p.status} · {p.lines.length} items · {formatPrice(totalAmount(p))}</p>
                   </div>
                   <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => printPurchase(p)} title="Print">
+                      <Printer className="w-3.5 h-3.5" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setForm(p)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
