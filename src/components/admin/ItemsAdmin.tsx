@@ -35,7 +35,7 @@ export function ItemsAdmin() {
 
   const filtered = products.filter((p) => {
     const q = search.toLowerCase();
-    return !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q);
+    return !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
   });
 
   return (
@@ -57,8 +57,10 @@ export function ItemsAdmin() {
           <Input type="number" placeholder="Cost" value={form.cost || ''} onChange={(e) => set('cost', Number(e.target.value))} />
           <Input type="number" placeholder="Stock Qty" value={form.stock || ''} onChange={(e) => set('stock', Number(e.target.value))} />
           <Input type="number" placeholder="Reorder Level" value={form.reorderLevel || ''} onChange={(e) => set('reorderLevel', Number(e.target.value))} />
-          <Input placeholder="Badge (e.g. DR)" maxLength={3} value={form.badge || ''} onChange={(e) => set('badge', e.target.value)} />
+          <Input placeholder="Badge (e.g. Sale / New)" maxLength={12} value={form.badge || ''} onChange={(e) => set('badge', e.target.value)} />
           <BarcodeInput value={form.barcode || ''} onChange={(v) => set('barcode', v)} placeholder="Barcode" />
+          <Input placeholder="SKU / Item Code" value={form.sku || ''} onChange={(e) => set('sku', e.target.value)} />
+          <Input type="number" placeholder="Original Price" value={form.originalPrice || ''} onChange={(e) => set('originalPrice', Number(e.target.value))} />
           <select
             className="h-10 px-3 rounded-md border bg-background text-sm"
             value={form.vendorId || ''}
@@ -121,6 +123,7 @@ function ItemRow({
         <p className="font-medium text-sm truncate">{p.name}</p>
         <p className="text-xs text-muted-foreground">
           {p.category} · Stock: {p.stock} · {formatPrice(p.price)}
+          {p.sku ? ` · SKU ${p.sku}` : ''}
           {p.barcode ? ` · ⌗ ${p.barcode}` : ''}
         </p>
       </div>
