@@ -91,10 +91,60 @@ export function ProfitLossAdmin() {
 
   const maxMonthly = Math.max(...data.monthlyArr.map((m) => m[1].sales), 1);
 
+  const printPL = () => {
+    const topRows = data.topItems
+      .map(
+        (it) => `<tr>
+          <td>${escapeHtml(it.name)}</td>
+          <td class="right">${it.qty}</td>
+          <td class="right">${formatPrice(it.sales)}</td>
+          <td class="right">${formatPrice(it.cost)}</td>
+          <td class="right">${formatPrice(it.profit)}</td>
+        </tr>`,
+      )
+      .join('');
+    const monthly = data.monthlyArr
+      .map(
+        ([m, v]) => `<tr>
+          <td>${escapeHtml(m)}</td>
+          <td class="right">${formatPrice(v.sales)}</td>
+          <td class="right">${formatPrice(v.cost)}</td>
+          <td class="right">${formatPrice(v.sales - v.cost)}</td>
+        </tr>`,
+      )
+      .join('');
+    const body = `
+      <h2>Profit &amp; Loss</h2>
+      <p class="muted">Period: ${escapeHtml(from)} → ${escapeHtml(to)} · ${data.invoiceCount} invoices</p>
+      <table class="totals" style="margin-left:0;width:100%">
+        <tr><td>Total Sales</td><td class="right">${formatPrice(data.totalSales)}</td></tr>
+        <tr><td>Cost of Goods Sold</td><td class="right">${formatPrice(data.totalCOGS)}</td></tr>
+        <tr><td class="grand">Gross Profit</td><td class="right grand">${formatPrice(data.grossProfit)} (${data.margin.toFixed(1)}%)</td></tr>
+        <tr><td>Total Purchases</td><td class="right">${formatPrice(data.totalPurchases)}</td></tr>
+        <tr><td>Receivables</td><td class="right">${formatPrice(data.totalReceivable)}</td></tr>
+        <tr><td>Payables</td><td class="right">${formatPrice(data.totalPayable)}</td></tr>
+      </table>
+      ${monthly ? `<h3 style="margin-top:18px">Monthly Breakdown</h3>
+        <table><thead><tr><th>Month</th><th class="right">Sales</th><th class="right">COGS</th><th class="right">Profit</th></tr></thead><tbody>${monthly}</tbody></table>` : ''}
+      ${topRows ? `<h3 style="margin-top:18px">Top Items by Profit</h3>
+        <table><thead><tr><th>Item</th><th class="right">Qty</th><th class="right">Sales</th><th class="right">Cost</th><th class="right">Profit</th></tr></thead><tbody>${topRows}</tbody></table>` : ''}
+    `;
+    printHtml(body, 'Profit & Loss', {
+      storeName: settings.storeName,
+      storeNote: settings.storeNote,
+      logoUrl: settings.logoImageUrl,
+    });
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        <h4 className="font-semibold mb-3">Date Range</h4>
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <h4 className="font-semibold">Date Range</h4>
+          <Button size="sm" onClick={printPL}>
+            <Printer className="w-4 h-4 mr-1" /> Print P&amp;L
+          </Button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           <div>
             <label className="text-xs">From</label>
