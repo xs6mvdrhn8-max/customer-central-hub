@@ -6,6 +6,7 @@ import {
 import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from './customization';
 import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
 import { importSchema } from '@/lib/importSchema';
+import { createBackupBlob } from '@/lib/backup';
 
 // Stored shape — password is ALWAYS a SHA-256 hex digest, never plaintext.
 interface StoredAdminCreds { username: string; passwordHash: string; }
@@ -68,7 +69,7 @@ interface StoreState {
   loginAdmin: (u: string, p: string) => Promise<boolean>;
   logoutAdmin: () => void;
 
-  exportData: () => void;
+  exportData: () => Promise<void>;
   importData: (json: string) => { ok: boolean; error?: string };
   resetAll: () => void;
 
@@ -255,18 +256,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     logoutAdmin: () => setIsAdmin(false),
 
-    exportData: () => {
+    exportData: async () => {
       // Backup payload deliberately EXCLUDES adminCreds — credentials must never
       // travel in a JSON file that could be intercepted, shared, or reimported
       // to overwrite another device's login.
       const data = { products, customers, vendors, purchases, ledger, invoices, settings, theme, prefs, categories, exportedAt: new Date().toISOString(), version: 3 };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const { blob, extension, compressed } = await createBackupBlob(JSON.stringify(data));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${settings.storeName.replace(/\s+/g, '-')}-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `${settings.storeName.replace(/\s+/g, '-')}-backup-${new Date().toISOString().slice(0, 10)}.${extension}`;
       a.click();
       URL.revokeObjectURL(url);
+      if (!compressed) console.info('Compressed backup is not supported in this browser; exported JSON instead.');
     },
     importData: (json) => {
       let parsed: unknown;
