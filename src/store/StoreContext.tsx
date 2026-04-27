@@ -7,6 +7,7 @@ import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from '
 import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
 import { importSchema } from '@/lib/importSchema';
 import { createBackupBlob } from '@/lib/backup';
+import { clearOfflineState, readOfflineState, writeOfflineState } from '@/lib/offlineDb';
 
 // Stored shape — password is ALWAYS a SHA-256 hex digest, never plaintext.
 interface StoredAdminCreds { username: string; passwordHash: string; }
@@ -113,6 +114,16 @@ const defaultState = {
 const StoreContext = createContext<StoreState | null>(null);
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+function normalizeState(parsed: any) {
+  return {
+    ...defaultState,
+    ...(parsed || {}),
+    adminCreds: migrateCreds(parsed),
+    theme: { ...DEFAULT_THEME, ...(parsed?.theme || {}) },
+    prefs: { ...DEFAULT_PREFS, ...(parsed?.prefs || {}) },
+  };
+}
+
 function migrateCreds(parsed: any): StoredAdminCreds {
   // Migrate legacy plaintext creds: { username, password } -> { username, passwordHash }
   const c = parsed?.adminCreds;
@@ -131,13 +142,7 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaultState;
     const parsed = JSON.parse(raw);
-    return {
-      ...defaultState,
-      ...parsed,
-      adminCreds: migrateCreds(parsed),
-      theme: { ...DEFAULT_THEME, ...(parsed.theme || {}) },
-      prefs: { ...DEFAULT_PREFS, ...(parsed.prefs || {}) },
-    };
+    return normalizeState(parsed);
   } catch { return defaultState; }
 }
 
@@ -156,12 +161,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [categories, setCategoriesState] = useState<string[]>(initial.categories);
   const [adminCreds, setAdminCreds] = useState<StoredAdminCreds>(initial.adminCreds);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [storageReady, setStorageReady] = useState(false);
 
-  // Persist (note: only the password HASH is ever written, never plaintext)
   useEffect(() => {
+    readOfflineState<any>()
+      .then((stored) => {
+        if (!stored) return;
+        const next = normalizeState(stored);
+        setProducts(next.products); setCustomers(next.customers); setVendors(next.vendors);
+        setPurchases(next.purchases); setLedger(next.ledger); setInvoices(next.invoices);
+        setCart(next.cart); setSettings(next.settings); setTheme(next.theme); setPrefs(next.prefs);
+        setCategoriesState(next.categories); setAdminCreds(next.adminCreds);
+      })
+      .catch(() => undefined)
+      .finally(() => setStorageReady(true));
+  }, []);
+
+  // Persist in IndexedDB so large offline data works beyond localStorage's small quota.
+  useEffect(() => {
+    if (!storageReady) return;
     const data = { products, customers, vendors, purchases, ledger, invoices, cart, settings, theme, prefs, categories, adminCreds };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { /* quota or privacy mode */ }
-  }, [products, customers, vendors, purchases, ledger, invoices, cart, settings, theme, prefs, categories, adminCreds]);
+    writeOfflineState(data).catch(() => undefined);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch { localStorage.removeItem(STORAGE_KEY); }
+  }, [products, customers, vendors, purchases, ledger, invoices, cart, settings, theme, prefs, categories, adminCreds, storageReady]);
 
   // Apply theme to CSS variables
   useEffect(() => {
