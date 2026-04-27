@@ -3,11 +3,13 @@ export interface Product {
   name: string;
   category: string;
   price: number;
+  originalPrice?: number;
   cost: number;
   stock: number;
   reorderLevel: number;
   badge?: string;
   barcode?: string;
+  sku?: string;
   vendorId?: string;
   location?: string;
   imageUrl?: string;
