@@ -20,6 +20,8 @@ export interface Customer {
   id: string;
   name: string;
   phone?: string;
+  email?: string;
+  address?: string;
   note?: string;
 }
 
@@ -27,6 +29,8 @@ export interface Vendor {
   id: string;
   name: string;
   phone?: string;
+  email?: string;
+  address?: string;
   note?: string;
 }
 
