@@ -181,6 +181,9 @@ export function PurchasesAdmin() {
                     <p className="text-xs text-muted-foreground">{p.orderDate} · {p.status} · {p.lines.length} items · {formatPrice(totalAmount(p))}</p>
                   </div>
                   <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => printPurchase(p)} title="Print">
+                      <Printer className="w-3.5 h-3.5" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setForm(p)}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
