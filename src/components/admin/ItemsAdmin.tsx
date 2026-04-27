@@ -190,9 +190,23 @@ export function ItemsAdmin() {
       </Card>
 
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3 gap-2">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h4 className="font-semibold">All Items ({products.length})</h4>
-          <Input placeholder="Search items..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input placeholder="Search items..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Button size="sm" variant="outline" onClick={printList}>
+              <Printer className="w-3.5 h-3.5 mr-1" /> Print
+            </Button>
+            <Button size="sm" variant="outline" onClick={exportCsv}>
+              <Download className="w-3.5 h-3.5 mr-1" /> Export
+            </Button>
+            <Button size="sm" variant="outline" onClick={importCsv}>
+              <Upload className="w-3.5 h-3.5 mr-1" /> Import
+            </Button>
+            <Button size="sm" variant="ghost" onClick={downloadTemplate} title="Download blank CSV template">
+              <FileText className="w-3.5 h-3.5 mr-1" /> Template
+            </Button>
+          </div>
         </div>
         {search ? (
           <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
