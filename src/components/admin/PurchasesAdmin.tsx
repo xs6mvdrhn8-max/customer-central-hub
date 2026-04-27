@@ -5,10 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, Pencil, ScanLine } from 'lucide-react';
+import { Plus, Trash2, Pencil, ScanLine, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarcodeScannerModal } from '@/components/BarcodeScannerModal';
 import { SortableList } from '@/components/SortableList';
+import { printHtml, escapeHtml } from '@/lib/print';
 
 const empty: PurchaseOrder = {
   id: '', vendorName: '', status: 'ordered', orderDate: new Date().toISOString().slice(0, 10),
