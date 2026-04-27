@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, X, Download, Upload, RotateCcw, Palette } from 'lucide-react';
 import { SortableList } from '@/components/SortableList';
 import { toast } from 'sonner';
+import { BACKUP_SIZE_LIMIT_BYTES, readBackupFile } from '@/lib/backup';
 
 const FONTS_DISPLAY = ['Playfair Display', 'DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
 const FONTS_BODY = ['DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
@@ -39,12 +40,11 @@ export function CustomizationAdmin() {
   };
   const removeCat = (c: string) => setCategories(categories.filter((x) => x !== c));
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    // 5 MB cap — guards against accidental huge files
-    if (f.size > 5 * 1024 * 1024) {
-      toast.error('Backup file is too large (max 5 MB)');
+    if (f.size > BACKUP_SIZE_LIMIT_BYTES) {
+      toast.error('Backup file is too large (max 100 MB)');
       e.target.value = '';
       return;
     }
@@ -52,13 +52,13 @@ export function CustomizationAdmin() {
       e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = importData(String(reader.result));
+    try {
+      const result = importData(await readBackupFile(f));
       if (result.ok) toast.success('Data restored');
       else toast.error(result.error || 'Invalid backup file');
-    };
-    reader.readAsText(f);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not read backup file');
+    }
     e.target.value = '';
   };
 
@@ -237,7 +237,7 @@ export function CustomizationAdmin() {
       <Card className="p-5">
         <h4 className="font-semibold mb-1">Backup & Restore</h4>
         <p className="text-xs text-muted-foreground mb-4">
-          Data အားလုံးကို JSON file အဖြစ် download/upload လုပ်နိုင်ပါတယ်။ Offline backup အတွက် သုံးပါ။
+          Data အားလုံးကို compressed .phb backup file အဖြစ် download/upload လုပ်နိုင်ပါတယ်။ .json backup အဟောင်းလည်း import ပြန်ထည့်လို့ရပါတယ်။
         </p>
         <div className="flex flex-wrap gap-2">
           <Button onClick={exportData} variant="outline">
@@ -246,7 +246,7 @@ export function CustomizationAdmin() {
           <Button onClick={() => fileRef.current?.click()} variant="outline">
             <Upload className="w-4 h-4 mr-1.5" /> Import Backup
           </Button>
-          <input ref={fileRef} type="file" accept="application/json" hidden onChange={handleImport} />
+          <input ref={fileRef} type="file" accept=".phb,.json,application/json,application/gzip" hidden onChange={handleImport} />
           <Button onClick={resetAll} variant="destructive">
             <RotateCcw className="w-4 h-4 mr-1.5" /> Reset All Data
           </Button>
