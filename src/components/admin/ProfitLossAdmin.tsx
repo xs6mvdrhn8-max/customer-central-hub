@@ -3,7 +3,8 @@ import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, TrendingDown, DollarSign, Package } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Printer } from 'lucide-react';
+import { printHtml, escapeHtml } from '@/lib/print';
 
 function startOfMonth() {
   const d = new Date();
@@ -15,7 +16,7 @@ function today() {
 }
 
 export function ProfitLossAdmin() {
-  const { invoices, purchases, ledger, formatPrice } = useStore();
+  const { invoices, purchases, ledger, formatPrice, settings } = useStore();
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(today());
 
