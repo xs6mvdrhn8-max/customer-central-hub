@@ -23,7 +23,7 @@ const empty: Product = {
 };
 
 export function ItemsAdmin() {
-  const { products, vendors, categories, upsertProduct, deleteProduct, setProducts, formatPrice } = useStore();
+  const { products, vendors, categories, upsertProduct, deleteProduct, setProducts, formatPrice, settings } = useStore();
   const [form, setForm] = useState<Product>(empty);
   const [search, setSearch] = useState('');
 
@@ -44,6 +44,109 @@ export function ItemsAdmin() {
     const q = search.toLowerCase();
     return !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
   });
+
+  const printList = () => {
+    const list = filtered;
+    if (list.length === 0) return toast.error('No items to print');
+    const rows = list
+      .map(
+        (p, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(p.name)}${p.sku ? `<br/><span class="muted">SKU: ${escapeHtml(p.sku)}</span>` : ''}</td>
+          <td>${escapeHtml(p.category)}</td>
+          <td>${escapeHtml(p.barcode || '')}</td>
+          <td class="right">${p.stock}</td>
+          <td class="right">${formatPrice(p.cost)}</td>
+          <td class="right">${formatPrice(p.price)}</td>
+        </tr>`,
+      )
+      .join('');
+    const body = `
+      <h2>Items List</h2>
+      <p class="muted">${list.length} items${search ? ` · filter: "${escapeHtml(search)}"` : ''}</p>
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Category</th><th>Barcode</th><th class="right">Stock</th><th class="right">Cost</th><th class="right">Price</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+    printHtml(body, 'Items List', {
+      storeName: settings.storeName,
+      storeNote: settings.storeNote,
+      logoUrl: settings.logoImageUrl,
+    });
+  };
+
+  const exportCsv = () => {
+    const rows = products.map((p) => ({
+      name: p.name, category: p.category,
+      price: p.price, originalPrice: p.originalPrice ?? '',
+      cost: p.cost, stock: p.stock, reorderLevel: p.reorderLevel,
+      barcode: p.barcode || '', sku: p.sku || '', location: p.location || '',
+      description: p.description || '', badge: p.badge || '',
+    }));
+    downloadCsv(`items-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(rows, ITEM_CSV_HEADERS));
+    toast.success(`Exported ${rows.length} items`);
+  };
+
+  const downloadTemplate = () => {
+    downloadCsv('items-template.csv', toCsv([], ITEM_CSV_HEADERS));
+  };
+
+  const importCsv = async () => {
+    const file = await pickFile();
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) return toast.error('CSV is empty');
+      const errors: string[] = [];
+      const incoming: Product[] = [];
+      rows.forEach((r, idx) => {
+        const lineNo = idx + 2;
+        if (!r.name) { errors.push(`Row ${lineNo}: name is required`); return; }
+        if (!r.category) { errors.push(`Row ${lineNo}: category is required`); return; }
+        const num = (k: string) => r[k] === undefined || r[k] === '' ? 0 : Number(r[k]);
+        if (Number.isNaN(num('price'))) { errors.push(`Row ${lineNo}: price must be a number`); return; }
+        if (Number.isNaN(num('cost'))) { errors.push(`Row ${lineNo}: cost must be a number`); return; }
+        const matchById = r.id && products.find((p) => p.id === r.id);
+        const matchByBarcode = !matchById && r.barcode && products.find((p) => (p.barcode || '') === r.barcode);
+        const matchByName = !matchById && !matchByBarcode && products.find((p) => p.name.toLowerCase() === r.name.toLowerCase());
+        const existing = matchById || matchByBarcode || matchByName;
+        incoming.push({
+          id: existing?.id || uid(),
+          name: r.name,
+          category: r.category,
+          price: num('price'),
+          originalPrice: r.originalPrice ? num('originalPrice') : undefined,
+          cost: num('cost'),
+          stock: num('stock'),
+          reorderLevel: num('reorderLevel'),
+          barcode: r.barcode || '',
+          sku: r.sku || '',
+          location: r.location || '',
+          description: r.description || '',
+          badge: r.badge || '',
+          imageUrl: existing?.imageUrl || '',
+          vendorId: existing?.vendorId || '',
+        });
+      });
+      if (errors.length) {
+        toast.error(`${errors.length} error(s). First: ${errors[0]}`);
+        if (errors.length > 1) console.warn('CSV import errors', errors);
+        return;
+      }
+      const merged = [...products];
+      incoming.forEach((p) => {
+        const idx = merged.findIndex((x) => x.id === p.id);
+        if (idx === -1) merged.push(p); else merged[idx] = p;
+      });
+      setProducts(merged);
+      toast.success(`Imported ${incoming.length} items`);
+    } catch (err: any) {
+      toast.error(err?.message || 'CSV import failed');
+    }
+  };
+
 
   return (
     <div className="space-y-4">
