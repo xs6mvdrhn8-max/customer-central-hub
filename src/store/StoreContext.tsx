@@ -86,6 +86,17 @@ const seedProducts: Product[] = [
   { id: 'p4', name: 'LED Bulb 12W', category: 'Electrical', price: 3500, cost: 2000, stock: 120, reorderLevel: 30, location: 'Shelf C-3', description: 'Energy saving LED bulb, warm white.' },
   { id: 'p5', name: 'Paint Brush 3"', category: 'Paint', price: 2500, cost: 1300, stock: 4, reorderLevel: 10, badge: 'LOW', location: 'Shelf D-1', description: 'Soft bristle paint brush.' },
   { id: 'p6', name: 'Steel Nails 3"', category: 'Hardware', price: 800, cost: 500, stock: 200, reorderLevel: 50, location: 'Drawer 4', description: 'Per kg, galvanized.' },
+  // From ဖိုးတရုတ် Hardware reference catalog
+  { id: 'seed-1', name: 'Professional Claw Hammer', category: 'Hand Tools', price: 16000, originalPrice: 16000, cost: 10000, stock: 12, reorderLevel: 4, badge: 'Sale', location: 'Shelf B-1', imageUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&h=600&fit=crop', description: 'အရည်အသွေးမြင့် သံချောင်းလက်ကိုင်ပါ claw hammer ဖြစ်ပါတယ်။ အိမ်သုံးနှင့် လုပ်ငန်းသုံး နှစ်မျိုးလုံး သင့်တော်ပါတယ်။' },
+  { id: 'seed-2', name: 'Cordless Impact Drill 20V', category: 'Power Tools', price: 2800000, cost: 2200000, stock: 5, reorderLevel: 2, badge: 'New', location: 'Shelf A-2', description: '20V Li-ion battery ပါဝင်သော cordless impact drill ဖြစ်ပါတယ်။ သစ်သား၊ သံ၊ ကွန်ကရစ် အားလုံး ဖောက်နိုင်ပါတယ်။' },
+  { id: 'seed-3', name: 'Screwdriver Set (12 pcs)', category: 'Hand Tools', price: 45000, cost: 28000, stock: 18, reorderLevel: 5, location: 'Shelf B-3', description: 'Flathead နှင့် Phillips head အမျိုးမျိုး ပါဝင်သော screwdriver set ဖြစ်ပါတယ်။' },
+  { id: 'seed-4', name: 'Safety Goggles', category: 'Accessories', price: 18000, cost: 11000, stock: 30, reorderLevel: 10, location: 'Shelf E-1', description: 'ဖုန်မှုန့်နှင့် အစအန ကာကွယ်ပေးနိုင်သော safety goggles ဖြစ်ပါတယ်။' },
+  { id: 'seed-5', name: 'Angle Grinder 750W', category: 'Power Tools', price: 55000, originalPrice: 68000, cost: 42000, stock: 8, reorderLevel: 3, badge: 'Sale', location: 'Shelf A-3', description: '750W motor ပါဝင်သော angle grinder ဖြစ်ပြီး သံဖြတ်ခြင်း၊ သွေးခြင်း အတွက် သင့်တော်ပါတယ်။' },
+  { id: 'seed-6', name: 'Measuring Tape 3m', category: 'Accessories', price: 4500, cost: 2500, stock: 50, reorderLevel: 15, badge: 'New', location: 'Drawer 1', description: '3 မီတာ အရှည်ရှိသော ကြံ့ခိုင်သည့် measuring tape ဖြစ်ပါတယ်။' },
+  { id: 'seed-7', name: 'Adjustable Wrench 12"', category: 'Hand Tools', price: 50000, cost: 32000, stock: 14, reorderLevel: 4, location: 'Shelf B-4', description: '12 လက်မ adjustable wrench ဖြစ်ပြီး chrome vanadium steel ဖြင့် ပြုလုပ်ထားပါတယ်။' },
+  { id: 'seed-8', name: 'Circular Saw 1200W 185mm', category: 'Power Tools', price: 320000, cost: 250000, stock: 6, reorderLevel: 2, location: 'Shelf A-4', description: '1200W circular saw ဖြစ်ပြီး သစ်သားဖြတ်တောက်ခြင်း အတွက် အထူးသင့်တော်ပါတယ်။' },
+  { id: 'seed-9', name: 'Work Gloves (Heavy Duty)', category: 'Accessories', price: 12000, cost: 7000, stock: 40, reorderLevel: 12, location: 'Shelf E-2', description: 'အရည်အသွေးမြင့် leather work gloves ဖြစ်ပြီး လက်ကို ကာကွယ်ပေးပါတယ်။' },
+  { id: 'seed-10', name: 'Spirit Level 600mm', category: 'Hand Tools', price: 22000, cost: 14000, stock: 16, reorderLevel: 5, location: 'Shelf B-5', description: 'အရှည် 600mm aluminium spirit level — ပြားညီမှု တိုင်းတာရန် အသုံးပြုနိုင်ပါတယ်။' },
 ];
 
 const DEFAULT_CATEGORIES = ['Power Tools', 'Hand Tools', 'Plumbing', 'Electrical', 'Paint', 'Hardware', 'Accessories'];
