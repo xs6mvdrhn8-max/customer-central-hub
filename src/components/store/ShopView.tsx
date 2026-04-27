@@ -17,7 +17,7 @@ export function ShopView() {
 
   const filtered = products.filter((p) => {
     const q = search.toLowerCase();
-    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q);
+    const matchesQ = !q || p.name.toLowerCase().includes(q) || (p.location || '').toLowerCase().includes(q) || (p.barcode || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
     const matchesC = category === 'all' || category === allLabel || p.category === category;
     return matchesQ && matchesC;
   });
@@ -111,6 +111,9 @@ export function ShopView() {
                   <span className="font-display font-bold text-primary text-sm md:text-base truncate">
                     {formatPrice(p.price)}
                   </span>
+                  {p.originalPrice && p.originalPrice > p.price && (
+                    <span className="text-xs text-muted-foreground line-through truncate">{formatPrice(p.originalPrice)}</span>
+                  )}
                   <span className="text-xs text-muted-foreground whitespace-nowrap">×{p.stock}</span>
                 </div>
                 <Button
