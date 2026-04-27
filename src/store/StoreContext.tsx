@@ -316,7 +316,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetAll: () => {
       if (confirm('Reset ALL data? This cannot be undone.')) {
         localStorage.removeItem(STORAGE_KEY);
-        window.location.reload();
+        clearOfflineState().finally(() => window.location.reload());
       }
     },
     formatPrice,
