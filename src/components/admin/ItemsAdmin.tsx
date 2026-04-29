@@ -99,49 +99,93 @@ export function ItemsAdmin() {
       const text = await file.text();
       const rows = parseCsv(text);
       if (rows.length === 0) return toast.error('CSV is empty');
+
+      // Case-insensitive lookup across multiple possible header names.
+      const pick = (r: Record<string, string>, keys: string[]): string => {
+        const map: Record<string, string> = {};
+        for (const k of Object.keys(r)) map[k.toLowerCase().trim()] = r[k];
+        for (const k of keys) {
+          const v = map[k.toLowerCase()];
+          if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+        }
+        return '';
+      };
+      const numOf = (s: string) => {
+        if (!s) return 0;
+        const cleaned = s.replace(/[^0-9.\-]/g, '');
+        const n = Number(cleaned);
+        return Number.isFinite(n) ? n : 0;
+      };
+
       const errors: string[] = [];
+      const skipped: string[] = [];
       const incoming: Product[] = [];
+
       rows.forEach((r, idx) => {
         const lineNo = idx + 2;
-        if (!r.name) { errors.push(`Row ${lineNo}: name is required`); return; }
-        if (!r.category) { errors.push(`Row ${lineNo}: category is required`); return; }
-        const num = (k: string) => r[k] === undefined || r[k] === '' ? 0 : Number(r[k]);
-        if (Number.isNaN(num('price'))) { errors.push(`Row ${lineNo}: price must be a number`); return; }
-        if (Number.isNaN(num('cost'))) { errors.push(`Row ${lineNo}: cost must be a number`); return; }
-        const matchById = r.id && products.find((p) => p.id === r.id);
-        const matchByBarcode = !matchById && r.barcode && products.find((p) => (p.barcode || '') === r.barcode);
-        const matchByName = !matchById && !matchByBarcode && products.find((p) => p.name.toLowerCase() === r.name.toLowerCase());
-        const existing = matchById || matchByBarcode || matchByName;
+        const name = pick(r, ['name', 'Item', 'item', 'Item Name', 'Product', 'Product Name']);
+        if (!name) { skipped.push(`Row ${lineNo}: blank/no name`); return; }
+
+        const category = pick(r, ['category', 'Category', 'Type', 'Class']) || 'Uncategorized';
+        const priceStr = pick(r, ['price', 'Price', 'Sale Price', 'Sales Price', 'Retail']);
+        const costStr = pick(r, ['cost', 'Cost', 'Purchase Cost', 'Avg Cost']);
+        const stockStr = pick(r, ['stock', 'stockQty', 'Quantity On Hand', 'Qty On Hand', 'Quantity', 'Qty', 'On Hand']);
+        const reorderStr = pick(r, ['reorderLevel', 'Reorder Pt (Min)', 'Reorder Point', 'Reorder Level', 'Min', 'Reorder']);
+        const sku = pick(r, ['sku', 'SKU', 'MPN', 'mpn', 'itemCode', 'Item Code', 'Code']);
+        const barcode = pick(r, ['barcode', 'Barcode', 'UPC', 'EAN']);
+        const description = pick(r, ['description', 'Description', 'Purchase Description', 'Notes']);
+        const location = pick(r, ['location', 'Location', 'Bin', 'Shelf']);
+        const badge = pick(r, ['badge', 'Badge']);
+        const originalPriceStr = pick(r, ['originalPrice', 'Original Price', 'MSRP', 'List Price']);
+        const vendorName = pick(r, ['vendor', 'Vendor', 'Preferred Vendor', 'Supplier', 'vendorName']);
+
+        // Match existing vendor by name (case-insensitive); blank = no vendor.
+        const vendorMatch = vendorName
+          ? vendors.find((v) => v.name.toLowerCase() === vendorName.toLowerCase())
+          : undefined;
+
+        const idFromRow = pick(r, ['id', 'ID']);
+        const matchById = idFromRow && products.find((p) => p.id === idFromRow);
+        const matchBySku = !matchById && sku && products.find((p) => (p.sku || '').toLowerCase() === sku.toLowerCase());
+        const matchByBarcode = !matchById && !matchBySku && barcode && products.find((p) => (p.barcode || '') === barcode);
+        const matchByName = !matchById && !matchBySku && !matchByBarcode && products.find((p) => p.name.toLowerCase() === name.toLowerCase());
+        const existing = matchById || matchBySku || matchByBarcode || matchByName;
+
         incoming.push({
           id: existing?.id || uid(),
-          name: r.name,
-          category: r.category,
-          price: num('price'),
-          originalPrice: r.originalPrice ? num('originalPrice') : undefined,
-          cost: num('cost'),
-          stock: num('stock'),
-          reorderLevel: num('reorderLevel'),
-          barcode: r.barcode || '',
-          sku: r.sku || '',
-          location: r.location || '',
-          description: r.description || '',
-          badge: r.badge || '',
+          name,
+          category,
+          price: numOf(priceStr),
+          originalPrice: originalPriceStr ? numOf(originalPriceStr) : undefined,
+          cost: numOf(costStr),
+          stock: numOf(stockStr),
+          reorderLevel: numOf(reorderStr),
+          barcode,
+          sku,
+          location,
+          description,
+          badge,
           imageUrl: existing?.imageUrl || '',
-          vendorId: existing?.vendorId || '',
+          vendorId: vendorMatch?.id || existing?.vendorId || '',
         });
       });
-      if (errors.length) {
-        toast.error(`${errors.length} error(s). First: ${errors[0]}`);
-        if (errors.length > 1) console.warn('CSV import errors', errors);
+
+      if (incoming.length === 0) {
+        toast.error('No valid rows found in CSV');
         return;
       }
+
       const merged = [...products];
       incoming.forEach((p) => {
         const idx = merged.findIndex((x) => x.id === p.id);
         if (idx === -1) merged.push(p); else merged[idx] = p;
       });
       setProducts(merged);
-      toast.success(`Imported ${incoming.length} items`);
+
+      const msg = `Imported ${incoming.length} items` + (skipped.length ? ` · skipped ${skipped.length}` : '');
+      toast.success(msg);
+      if (skipped.length) console.warn('CSV import skipped rows', skipped.slice(0, 20));
+      if (errors.length) console.warn('CSV import errors', errors);
     } catch (err: any) {
       toast.error(err?.message || 'CSV import failed');
     }
