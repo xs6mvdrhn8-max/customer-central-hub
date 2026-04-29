@@ -3,7 +3,6 @@ import { StoreProvider, useStore } from '@/store/StoreContext';
 import { Sidebar } from '@/components/store/Sidebar';
 import { OverviewView } from '@/components/store/OverviewView';
 import { ShopView } from '@/components/store/ShopView';
-import { InvoicesView } from '@/components/store/InvoicesView';
 import { AdminView } from '@/components/store/AdminView';
 import { CartDrawer } from '@/components/store/CartDrawer';
 import { ViewName } from '@/types';
@@ -19,7 +18,6 @@ function StoreApp() {
   const titles: Record<ViewName, string> = {
     overview: t.overview,
     shop: t.shop,
-    invoices: t.invoices,
     admin: t.admin,
   };
 
@@ -59,7 +57,6 @@ function StoreApp() {
         <div className="p-4 md:p-6 max-w-7xl mx-auto">
           {view === 'overview' && <OverviewView onNavigate={(v) => setView(v)} />}
           {view === 'shop' && <ShopView />}
-          {view === 'invoices' && <InvoicesView />}
           {view === 'admin' && <AdminView />}
         </div>
       </main>
