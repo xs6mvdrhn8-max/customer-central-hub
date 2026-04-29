@@ -59,27 +59,6 @@ export function OverviewView({ onNavigate }: Props) {
         })}
       </div>
 
-      {/* ALERTS */}
-      <Card className="p-6">
-        <h3 className="font-display text-xl mb-4">သတိပေးချက်များ / Low Stock Alerts</h3>
-        {lowStock.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No low-stock alerts. ✓</p>
-        ) : (
-          <ul className="divide-y">
-            {lowStock.map((p) => (
-              <li key={p.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.category} {p.location && `· ${p.location}`}</p>
-                </div>
-                <span className="text-sm font-semibold text-destructive">
-                  Stock: {p.stock} (≤ {p.reorderLevel})
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
     </div>
   );
 }
