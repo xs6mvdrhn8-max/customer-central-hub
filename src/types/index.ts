@@ -94,4 +94,4 @@ export interface StoreSettings {
   logoImageUrl?: string;
 }
 
-export type ViewName = 'overview' | 'shop' | 'invoices' | 'admin';
+export type ViewName = 'overview' | 'shop' | 'admin';
