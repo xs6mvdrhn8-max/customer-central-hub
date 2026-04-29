@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Lock, Shield, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { ItemsAdmin } from '@/components/admin/ItemsAdmin';
+import { DashboardAdmin } from '@/components/admin/DashboardAdmin';
 import { CustomersAdmin } from '@/components/admin/CustomersAdmin';
 import { VendorsAdmin } from '@/components/admin/VendorsAdmin';
 import { PurchasesAdmin } from '@/components/admin/PurchasesAdmin';
@@ -81,8 +82,9 @@ export function AdminView() {
         </Card>
       )}
 
-      <Tabs defaultValue="items" className="w-full">
+      <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto h-auto flex-wrap gap-1">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
           <TabsTrigger value="customers">Customers</TabsTrigger>
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
@@ -92,6 +94,7 @@ export function AdminView() {
           <TabsTrigger value="customize">Customize</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
+        <TabsContent value="dashboard" className="mt-4"><DashboardAdmin /></TabsContent>
         <TabsContent value="items" className="mt-4"><ItemsAdmin /></TabsContent>
         <TabsContent value="customers" className="mt-4"><CustomersAdmin /></TabsContent>
         <TabsContent value="vendors" className="mt-4"><VendorsAdmin /></TabsContent>
