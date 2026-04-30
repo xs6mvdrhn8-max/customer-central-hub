@@ -55,10 +55,19 @@ interface RawLine {
   page: number;
 }
 
-async function extractLines(file: File): Promise<RawLine[]> {
+interface RowToken {
+  x: number;
+  text: string;
+}
+
+interface PositionedLine extends RawLine {
+  tokens: RowToken[];
+}
+
+async function extractLines(file: File): Promise<PositionedLine[]> {
   const buf = await file.arrayBuffer();
   const pdf = await (pdfjsLib as any).getDocument({ data: buf }).promise;
-  const out: RawLine[] = [];
+  const out: PositionedLine[] = [];
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const content = await page.getTextContent();
@@ -73,28 +82,56 @@ async function extractLines(file: File): Promise<RawLine[]> {
     }
     const ys = [...rows.keys()].sort((a, b) => b - a);
     for (const y of ys) {
-      const parts = rows.get(y)!.sort((a, b) => a.x - b.x).map((p) => p.str);
-      const text = parts.join(' ').replace(/\s+/g, ' ').trim();
-      if (text) out.push({ text, page: p });
+      const tokens = rows.get(y)!.sort((a, b) => a.x - b.x).map((part) => ({
+        x: part.x,
+        text: String(part.str || '').trim(),
+      })).filter((part) => part.text);
+      const text = tokens.map((part) => part.text).join(' ').replace(/\s+/g, ' ').trim();
+      if (text) out.push({ text, page: p, tokens });
     }
   }
   return out;
+}
+
+function tokenToMoney(token: string): number | null {
+  if (!/^\d[\d,.\s]*$/.test(token.trim())) return null;
+  return parseMoney(token);
+}
+
+function pickRightmostPrice(tokens: RowToken[]): number | null {
+  const numeric = tokens
+    .map((token) => ({ token, value: tokenToMoney(token.text) }))
+    .filter((entry): entry is { token: RowToken; value: number } => entry.value !== null && entry.value > 0);
+
+  if (numeric.length === 0) return null;
+
+  // Price is usually the right-most large number in the PDF table.
+  const preferred = numeric
+    .filter((entry) => entry.value >= 1000 || /,/.test(entry.token.text))
+    .sort((left, right) => right.token.x - left.token.x);
+  if (preferred.length > 0) return preferred[0].value;
+
+  return numeric.sort((left, right) => right.token.x - left.token.x)[0].value;
 }
 
 export async function extractPdfPrices(file: File): Promise<PdfPriceRow[]> {
   const lines = await extractLines(file);
   const rows: PdfPriceRow[] = [];
 
-  for (const { text, page } of lines) {
+  for (const { text, page, tokens } of lines) {
     const upper = text.toUpperCase();
     const models = upper.match(MODEL_RE);
     if (!models) continue;
-    const moneyTokens = text.match(MONEY_RE) ?? [];
-    // Pick the last money token on the line (typical "wholesale" column is rightmost).
-    let price: number | null = null;
-    for (let i = moneyTokens.length - 1; i >= 0; i--) {
-      const v = parseMoney(moneyTokens[i]);
-      if (v !== null && v > 0) { price = v; break; }
+    let price = pickRightmostPrice(tokens);
+    if (price === null) {
+      const moneyTokens = text.match(MONEY_RE) ?? [];
+      for (let i = moneyTokens.length - 1; i >= 0; i--) {
+        const value = parseMoney(moneyTokens[i]);
+        if (value !== null && value >= 1000) {
+          price = value;
+          break;
+        }
+      }
     }
     if (price === null) continue;
 

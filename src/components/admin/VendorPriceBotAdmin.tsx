@@ -14,7 +14,7 @@ import { parseCsv, CsvRow } from '@/lib/csv';
 import { extractPdfPrices, normalizeModel, PdfPriceRow } from '@/lib/pdfParse';
 import { Product, PurchaseOrder } from '@/types';
 
-interface DominusItem {
+interface VendorCsvItem {
   itemName: string;
   vendor: string;
   cost: number;
@@ -26,7 +26,7 @@ interface DominusItem {
 }
 
 interface CompareRow {
-  csv: DominusItem;
+  csv: VendorCsvItem;
   product?: Product;
   pdf?: PdfPriceRow;
   newCost?: number;
@@ -52,14 +52,13 @@ function pick(row: CsvRow, keys: string[]): string {
   return '';
 }
 
-function parseDominusItems(rows: CsvRow[]): DominusItem[] {
-  const out: DominusItem[] = [];
+function parseVendorItems(rows: CsvRow[]): VendorCsvItem[] {
+  const out: VendorCsvItem[] = [];
   for (const r of rows) {
     const vendor = pick(r, ['Preferred Vendor', 'Vendor', 'Preferred vendor']);
-    if (!/dominus/i.test(vendor)) continue;
     const itemName = pick(r, ['Item', 'Item Name', 'Name', 'Description']);
     const mpn = pick(r, ['MPN', 'Manufacturer Part Number', 'Mfr Part #', 'Part #']);
-    if (!itemName && !mpn) continue;
+    if ((!itemName && !mpn) || !vendor) continue;
     out.push({
       itemName,
       vendor,
@@ -82,10 +81,11 @@ export function VendorPriceBotAdmin() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
 
-  const [csvItems, setCsvItems] = useState<DominusItem[]>([]);
+  const [csvItems, setCsvItems] = useState<VendorCsvItem[]>([]);
   const [pdfRows, setPdfRows] = useState<PdfPriceRow[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [keepMarkup, setKeepMarkup] = useState(true);
+  const [selectedVendor, setSelectedVendor] = useState('');
 
   // Build a lookup of products by normalized MPN/SKU/barcode/name fragment.
   const productIndex = useMemo(() => {
@@ -100,12 +100,17 @@ export function VendorPriceBotAdmin() {
     return map;
   }, [products]);
 
+  const visibleCsvItems = useMemo(() => {
+    if (!selectedVendor) return csvItems;
+    return csvItems.filter((item) => item.vendor === selectedVendor);
+  }, [csvItems, selectedVendor]);
+
   const compare: CompareRow[] = useMemo(() => {
-    if (csvItems.length === 0) return [];
+    if (visibleCsvItems.length === 0) return [];
     const pdfMap = new Map<string, PdfPriceRow>();
     for (const r of pdfRows) pdfMap.set(r.model, r);
 
-    return csvItems.map((csv) => {
+    return visibleCsvItems.map((csv) => {
       // Try exact, then progressively shorter prefixes/suffixes for robustness.
       const key = csv.mpnNorm;
       let pdf = pdfMap.get(key);
@@ -123,16 +128,21 @@ export function VendorPriceBotAdmin() {
       const needsRestock = csv.qty <= csv.reorder;
       return { csv, product, pdf, newCost, changed, needsRestock };
     });
-  }, [csvItems, pdfRows, productIndex]);
+  }, [visibleCsvItems, pdfRows, productIndex]);
+
+  const vendorOptions = useMemo(
+    () => [...new Set(csvItems.map((item) => item.vendor).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [csvItems],
+  );
 
   const stats = useMemo(() => ({
-    totalCsv: csvItems.length,
+    totalCsv: visibleCsvItems.length,
     matchedPdf: compare.filter((c) => c.pdf).length,
     changed: compare.filter((c) => c.changed).length,
     lowStock: compare.filter((c) => c.needsRestock).length,
     noPdf: compare.filter((c) => !c.pdf).length,
     noProduct: compare.filter((c) => !c.product).length,
-  }), [compare, csvItems]);
+  }), [compare, visibleCsvItems]);
 
   const onCsvPick = (f: File | null) => {
     if (!f) return;
@@ -150,10 +160,11 @@ export function VendorPriceBotAdmin() {
     try {
       const text = await csvFile.text();
       const rows = parseCsv(text);
-      const items = parseDominusItems(rows);
+      const items = parseVendorItems(rows);
       setCsvItems(items);
-      if (items.length === 0) toast.warning('Dominus vendor row မတွေ့ပါ');
-      else toast.success(`Dominus items ${items.length} ခု import ပြီးပါပြီ`);
+      setSelectedVendor((prev) => prev || items[0]?.vendor || '');
+      if (items.length === 0) toast.warning('Vendor rows မတွေ့ပါ');
+      else toast.success(`Vendor items ${items.length} ခု import ပြီးပါပြီ`);
     } catch (e) {
       console.error(e);
       toast.error('CSV ဖတ်၍မရပါ — ဖိုင်ကို စစ်ပေးပါ');
@@ -167,14 +178,15 @@ export function VendorPriceBotAdmin() {
     try {
       // Always re-parse so users can correct a swapped pick by re-selecting.
       const csvText = await csvFile.text();
-      const items = parseDominusItems(parseCsv(csvText));
+      const items = parseVendorItems(parseCsv(csvText));
       setCsvItems(items);
+      setSelectedVendor((prev) => prev || items[0]?.vendor || '');
 
       const pdf = await extractPdfPrices(pdfFile);
       setPdfRows(pdf);
 
       if (items.length === 0) {
-        toast.error('CSV ထဲတွင် Dominus rows မတွေ့ပါ — ဖိုင် swap ဖြစ်နေသလား စစ်ပါ');
+        toast.error('CSV ထဲတွင် vendor rows မတွေ့ပါ — ဖိုင် swap ဖြစ်နေသလား စစ်ပါ');
       } else if (pdf.length === 0) {
         toast.error('PDF ထဲမှ ဈေးနှုန်း မထုတ်နိုင်ပါ — ဖိုင် swap ဖြစ်နေသလား စစ်ပါ');
       } else {
@@ -208,10 +220,10 @@ export function VendorPriceBotAdmin() {
   const createPurchaseOrder = () => {
     const targets = compare.filter((c) => c.needsRestock && c.product);
     if (targets.length === 0) { toast.info('Low stock item မရှိပါ'); return; }
-    const dominusVendor = vendors.find((v) => /dominus/i.test(v.name));
+    const matchedVendor = vendors.find((v) => v.name === selectedVendor) || vendors.find((v) => normalizeModel(v.name) === normalizeModel(selectedVendor));
     const po: PurchaseOrder = {
       id: uid(),
-      vendorName: dominusVendor?.name || 'Dominus',
+      vendorName: matchedVendor?.name || selectedVendor || 'Supplier',
       status: 'ordered',
       orderDate: new Date().toISOString().slice(0, 10),
       expectedDate: '',
@@ -239,14 +251,14 @@ export function VendorPriceBotAdmin() {
         </div>
         <div>
           <h3 className="font-semibold">Vendor Price Bot</h3>
-          <p className="text-xs text-muted-foreground">Dominus CSV နှင့် Hoteche Wholesale PDF ကို နှိုင်းယှဉ်ပြီး ဈေးနှုန်းနှင့် stock update လုပ်ပါ</p>
+          <p className="text-xs text-muted-foreground">CSV vendor items နဲ့ wholesale PDF ကို နှိုင်းယှဉ်ပြီး ဈေးနှုန်းနှင့် stock update လုပ်ပါ</p>
         </div>
       </Card>
 
       <Card className="p-4 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4" /> Dominus Items CSV</Label>
+            <Label className="flex items-center gap-2"><FileSpreadsheet className="w-4 h-4" /> Supplier Items CSV</Label>
             <input
               ref={csvInputRef}
               type="file"
@@ -257,7 +269,7 @@ export function VendorPriceBotAdmin() {
             {csvFile && <p className="text-xs text-muted-foreground truncate">📄 {csvFile.name}</p>}
           </div>
           <div className="space-y-2">
-            <Label className="flex items-center gap-2"><FileText className="w-4 h-4" /> Hoteche Wholesale PDF</Label>
+            <Label className="flex items-center gap-2"><FileText className="w-4 h-4" /> Supplier Wholesale PDF</Label>
             <input
               ref={pdfInputRef}
               type="file"
@@ -268,6 +280,21 @@ export function VendorPriceBotAdmin() {
             {pdfFile && <p className="text-xs text-muted-foreground truncate">📄 {pdfFile.name}</p>}
           </div>
         </div>
+
+        {vendorOptions.length > 0 && (
+          <div className="grid gap-2 sm:max-w-xs">
+            <Label>Vendor Filter</Label>
+            <select
+              className="h-10 px-3 rounded-md border bg-background text-sm"
+              value={selectedVendor}
+              onChange={(event) => setSelectedVendor(event.target.value)}
+            >
+              {vendorOptions.map((vendor) => (
+                <option key={vendor} value={vendor}>{vendor}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={importItemsFromCsv} disabled={!csvFile || analyzing}>
@@ -293,7 +320,7 @@ export function VendorPriceBotAdmin() {
 
       {csvItems.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          <Stat label="Dominus rows" value={stats.totalCsv} />
+          <Stat label="Vendor rows" value={stats.totalCsv} />
           <Stat label="Matched PDF" value={stats.matchedPdf} tone="success" />
           <Stat label="Price changes" value={stats.changed} tone="primary" />
           <Stat label="Low / Out of stock" value={stats.lowStock} tone="warning" />
