@@ -276,6 +276,50 @@ export function CustomizationAdmin() {
           </Button>
         </div>
       </Card>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-warning" />
+              Restore Preview
+            </DialogTitle>
+            <DialogDescription>
+              အောက်ပါ data များ ဤစက်ပေါ်က data ကို <strong>အစားထိုး overwrite</strong> လုပ်ပါမည်။ ပြန်ဖျက်လို့ မရပါ။
+            </DialogDescription>
+          </DialogHeader>
+          {preview && (
+            <div className="space-y-3">
+              {preview.exportedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Backup date: {new Date(preview.exportedAt).toLocaleString()}
+                </p>
+              )}
+              <div className="rounded-md border overflow-hidden">
+                <div className="grid grid-cols-3 text-xs font-semibold bg-muted px-3 py-2">
+                  <span></span><span className="text-right">Current</span><span className="text-right">Backup</span>
+                </div>
+                {(['products','customers','invoices','vendors','purchases','ledger'] as const).map((k) => (
+                  <div key={k} className="grid grid-cols-3 text-sm px-3 py-1.5 border-t">
+                    <span className="capitalize">{k}</span>
+                    <span className="text-right tabular-nums">{current[k]}</span>
+                    <span className="text-right tabular-nums font-medium">{preview.counts[k]}</span>
+                  </div>
+                ))}
+              </div>
+              {(current.products > 0 || current.invoices > 0) && (
+                <div className="text-xs p-2 rounded bg-destructive/10 text-destructive">
+                  ⚠ ဤစက်ပေါ်တွင် data ရှိနေပါသည်။ Restore လုပ်ပါက ပျက်သွားပါမည်။ အရင် Export Backup လုပ်ထားရန် အကြံပြုပါသည်။
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmRestore}>Overwrite & Restore</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
