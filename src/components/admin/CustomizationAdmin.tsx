@@ -27,9 +27,14 @@ const SWATCHES = [
 ];
 
 export function CustomizationAdmin() {
-  const { theme, updateTheme, prefs, updatePrefs, categories, setCategories, exportData, importData, resetAll } = useStore();
+  const { theme, updateTheme, prefs, updatePrefs, categories, setCategories, exportData, importData, resetAll, products, customers, invoices, vendors, purchases, ledger } = useStore();
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<null | {
+    json: string;
+    counts: { products: number; customers: number; invoices: number; vendors: number; purchases: number; ledger: number };
+    exportedAt?: string;
+  }>(null);
 
   const addCat = () => {
     const v = newCat.trim();
@@ -49,19 +54,37 @@ export function CustomizationAdmin() {
       e.target.value = '';
       return;
     }
-    if (!confirm('Importing will overwrite store data, settings, theme, and categories on this device. Admin login is preserved. Continue?')) {
-      e.target.value = '';
-      return;
-    }
     try {
-      const result = importData(await readBackupFile(f));
-      if (result.ok) toast.success('Data restored');
-      else toast.error(result.error || 'Invalid backup file');
+      const json = await readBackupFile(f);
+      let parsed: any = {};
+      try { parsed = JSON.parse(json); } catch { toast.error('File is not a valid backup'); e.target.value = ''; return; }
+      setPreview({
+        json,
+        exportedAt: parsed.exportedAt,
+        counts: {
+          products: parsed.products?.length ?? 0,
+          customers: parsed.customers?.length ?? 0,
+          invoices: parsed.invoices?.length ?? 0,
+          vendors: parsed.vendors?.length ?? 0,
+          purchases: parsed.purchases?.length ?? 0,
+          ledger: parsed.ledger?.length ?? 0,
+        },
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not read backup file');
     }
     e.target.value = '';
   };
+
+  const confirmRestore = () => {
+    if (!preview) return;
+    const result = importData(preview.json);
+    if (result.ok) toast.success('Data restored');
+    else toast.error(result.error || 'Invalid backup file');
+    setPreview(null);
+  };
+
+  const current = { products: products.length, customers: customers.length, invoices: invoices.length, vendors: vendors.length, purchases: purchases.length, ledger: ledger.length };
 
   return (
     <div className="space-y-4">
