@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Download, Upload, RotateCcw, Palette } from 'lucide-react';
+import { Plus, X, Download, Upload, RotateCcw, Palette, ShieldAlert } from 'lucide-react';
 import { SortableList } from '@/components/SortableList';
 import { toast } from 'sonner';
 import { BACKUP_SIZE_LIMIT_BYTES, readBackupFile } from '@/lib/backup';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 const FONTS_DISPLAY = ['Playfair Display', 'DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
 const FONTS_BODY = ['DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
