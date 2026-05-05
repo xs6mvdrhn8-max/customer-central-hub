@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X, Download, Upload, RotateCcw, Palette } from 'lucide-react';
+import { Plus, X, Download, Upload, RotateCcw, Palette, ShieldAlert } from 'lucide-react';
 import { SortableList } from '@/components/SortableList';
 import { toast } from 'sonner';
 import { BACKUP_SIZE_LIMIT_BYTES, readBackupFile } from '@/lib/backup';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 const FONTS_DISPLAY = ['Playfair Display', 'DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
 const FONTS_BODY = ['DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
@@ -26,9 +27,14 @@ const SWATCHES = [
 ];
 
 export function CustomizationAdmin() {
-  const { theme, updateTheme, prefs, updatePrefs, categories, setCategories, exportData, importData, resetAll } = useStore();
+  const { theme, updateTheme, prefs, updatePrefs, categories, setCategories, exportData, importData, resetAll, products, customers, invoices, vendors, purchases, ledger } = useStore();
   const [newCat, setNewCat] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<null | {
+    json: string;
+    counts: { products: number; customers: number; invoices: number; vendors: number; purchases: number; ledger: number };
+    exportedAt?: string;
+  }>(null);
 
   const addCat = () => {
     const v = newCat.trim();
@@ -48,19 +54,37 @@ export function CustomizationAdmin() {
       e.target.value = '';
       return;
     }
-    if (!confirm('Importing will overwrite store data, settings, theme, and categories on this device. Admin login is preserved. Continue?')) {
-      e.target.value = '';
-      return;
-    }
     try {
-      const result = importData(await readBackupFile(f));
-      if (result.ok) toast.success('Data restored');
-      else toast.error(result.error || 'Invalid backup file');
+      const json = await readBackupFile(f);
+      let parsed: any = {};
+      try { parsed = JSON.parse(json); } catch { toast.error('File is not a valid backup'); e.target.value = ''; return; }
+      setPreview({
+        json,
+        exportedAt: parsed.exportedAt,
+        counts: {
+          products: parsed.products?.length ?? 0,
+          customers: parsed.customers?.length ?? 0,
+          invoices: parsed.invoices?.length ?? 0,
+          vendors: parsed.vendors?.length ?? 0,
+          purchases: parsed.purchases?.length ?? 0,
+          ledger: parsed.ledger?.length ?? 0,
+        },
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not read backup file');
     }
     e.target.value = '';
   };
+
+  const confirmRestore = () => {
+    if (!preview) return;
+    const result = importData(preview.json);
+    if (result.ok) toast.success('Data restored');
+    else toast.error(result.error || 'Invalid backup file');
+    setPreview(null);
+  };
+
+  const current = { products: products.length, customers: customers.length, invoices: invoices.length, vendors: vendors.length, purchases: purchases.length, ledger: ledger.length };
 
   return (
     <div className="space-y-4">
@@ -252,6 +276,50 @@ export function CustomizationAdmin() {
           </Button>
         </div>
       </Card>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-warning" />
+              Restore Preview
+            </DialogTitle>
+            <DialogDescription>
+              အောက်ပါ data များ ဤစက်ပေါ်က data ကို <strong>အစားထိုး overwrite</strong> လုပ်ပါမည်။ ပြန်ဖျက်လို့ မရပါ။
+            </DialogDescription>
+          </DialogHeader>
+          {preview && (
+            <div className="space-y-3">
+              {preview.exportedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Backup date: {new Date(preview.exportedAt).toLocaleString()}
+                </p>
+              )}
+              <div className="rounded-md border overflow-hidden">
+                <div className="grid grid-cols-3 text-xs font-semibold bg-muted px-3 py-2">
+                  <span></span><span className="text-right">Current</span><span className="text-right">Backup</span>
+                </div>
+                {(['products','customers','invoices','vendors','purchases','ledger'] as const).map((k) => (
+                  <div key={k} className="grid grid-cols-3 text-sm px-3 py-1.5 border-t">
+                    <span className="capitalize">{k}</span>
+                    <span className="text-right tabular-nums">{current[k]}</span>
+                    <span className="text-right tabular-nums font-medium">{preview.counts[k]}</span>
+                  </div>
+                ))}
+              </div>
+              {(current.products > 0 || current.invoices > 0) && (
+                <div className="text-xs p-2 rounded bg-destructive/10 text-destructive">
+                  ⚠ ဤစက်ပေါ်တွင် data ရှိနေပါသည်။ Restore လုပ်ပါက ပျက်သွားပါမည်။ အရင် Export Backup လုပ်ထားရန် အကြံပြုပါသည်။
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPreview(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmRestore}>Overwrite & Restore</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

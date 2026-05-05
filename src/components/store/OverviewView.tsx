@@ -48,12 +48,12 @@ export function OverviewView({ onNavigate }: Props) {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label} className="p-4 hover:shadow-md transition-shadow">
+            <Card key={s.label} className="p-4 min-w-0 overflow-hidden hover:shadow-md transition-shadow">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.tone}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <p className="text-xs text-muted-foreground mt-3">{s.label}</p>
-              <p className="text-lg md:text-xl font-bold mt-1 truncate">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-3 truncate">{s.label}</p>
+              <p className="text-base md:text-xl font-bold mt-1 truncate">{s.value}</p>
             </Card>
           );
         })}

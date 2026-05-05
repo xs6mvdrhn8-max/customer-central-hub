@@ -45,13 +45,13 @@ export function DashboardAdmin() {
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Card key={s.label} className="p-4">
+            <Card key={s.label} className="p-4 min-w-0 overflow-hidden">
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.tone}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <p className="text-xs text-muted-foreground mt-3">{s.label}</p>
-              <p className="text-lg md:text-xl font-bold mt-1 truncate">{s.value}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{s.sub}</p>
+              <p className="text-xs text-muted-foreground mt-3 truncate">{s.label}</p>
+              <p className="text-base md:text-xl font-bold mt-1 truncate">{s.value}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{s.sub}</p>
             </Card>
           );
         })}
