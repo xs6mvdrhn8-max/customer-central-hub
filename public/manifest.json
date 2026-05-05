@@ -1,7 +1,7 @@
 {
   "name": "Phyo Tayote Hardware Store",
   "short_name": "PT Hardware",
-  "description": "Offline hardware store management app — items, customers, vendors, invoices, profit & loss",
+  "description": "Offline hardware store management — items, customers, vendors, invoices, profit and loss",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fcfbf8",
