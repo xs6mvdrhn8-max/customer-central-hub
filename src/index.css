@@ -75,12 +75,23 @@
 
 @layer base {
   * { @apply border-border; }
+  html, body { overflow-x: hidden; }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
+    word-break: keep-all;
+  }
+  :lang(my), [lang="my"] {
+    font-family: 'Noto Sans Myanmar', var(--font-body);
+    line-break: strict;
+    word-break: normal;
   }
 }
 
