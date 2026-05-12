@@ -1,4 +1,4 @@
-export const BACKUP_SIZE_LIMIT_BYTES = 100 * 1024 * 1024;
+// No file size limit — backups of any size are allowed
 export const BACKUP_EXTENSION = 'phb';
 export const BACKUP_MIME = 'application/vnd.photayote.backup';
 
@@ -23,10 +23,6 @@ export async function createBackupBlob(json: string): Promise<{ blob: Blob; exte
 }
 
 export async function readBackupFile(file: File): Promise<string> {
-  if (file.size > BACKUP_SIZE_LIMIT_BYTES) {
-    throw new Error('Backup file is too large (max 100 MB).');
-  }
-
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
   const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
