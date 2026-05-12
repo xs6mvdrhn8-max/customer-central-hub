@@ -49,11 +49,6 @@ export function CustomizationAdmin() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > BACKUP_SIZE_LIMIT_BYTES) {
-      toast.error('Backup file is too large (max 100 MB)');
-      e.target.value = '';
-      return;
-    }
     try {
       const json = await readBackupFile(f);
       let parsed: any = {};
