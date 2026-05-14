@@ -5,7 +5,7 @@ import {
 } from '@/types';
 import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from './customization';
 import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
-import { importSchema } from '@/lib/importSchema';
+import { parseBackupJson } from '@/lib/importBackup';
 import { createBackupBlob } from '@/lib/backup';
 import { clearOfflineState, readOfflineState, writeOfflineState } from '@/lib/offlineDb';
 
@@ -304,19 +304,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!compressed) console.info('Compressed backup is not supported in this browser; exported JSON instead.');
     },
     importData: (json) => {
-      let parsed: any;
-      try { parsed = JSON.parse(json); } catch { return { ok: false, error: 'File is not valid JSON.' }; }
-      // Accept both flat backups and wrapped { data: {...} } payloads.
-      if (parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object') {
-        parsed = { ...parsed.data, ...parsed };
-        delete parsed.data;
-      }
-      const result = importSchema.safeParse(parsed);
-      if (!result.success) {
-        const first = result.error.issues[0];
-        const where = first?.path?.join('.') || 'file';
-        return { ok: false, error: `Backup rejected at "${where}": ${first?.message || 'invalid'}` };
-      }
+      const result = parseBackupJson(json);
+      if (!result.ok) return { ok: false, error: result.error };
       const d = result.data;
       // adminCreds is never accepted from imports — schema strips it.
       if (d.products) setProducts(d.products as unknown as Product[]);
