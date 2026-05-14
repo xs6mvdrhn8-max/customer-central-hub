@@ -305,7 +305,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     },
     importData: (json) => {
       const result = parseBackupJson(json);
-      if (!result.ok) return { ok: false, error: result.error };
+      if ('error' in result) return { ok: false, error: result.error };
       const d = result.data;
       // adminCreds is never accepted from imports — schema strips it.
       if (d.products) setProducts(d.products as unknown as Product[]);
