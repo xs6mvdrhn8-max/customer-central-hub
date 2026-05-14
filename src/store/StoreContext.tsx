@@ -304,11 +304,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!compressed) console.info('Compressed backup is not supported in this browser; exported JSON instead.');
     },
     importData: (json) => {
-      let parsed: unknown;
+      let parsed: any;
       try { parsed = JSON.parse(json); } catch { return { ok: false, error: 'File is not valid JSON.' }; }
+      // Accept both flat backups and wrapped { data: {...} } payloads.
+      if (parsed && typeof parsed === 'object' && parsed.data && typeof parsed.data === 'object') {
+        parsed = { ...parsed.data, ...parsed };
+        delete parsed.data;
+      }
       const result = importSchema.safeParse(parsed);
       if (!result.success) {
-        return { ok: false, error: 'Backup file failed validation and was rejected.' };
+        const first = result.error.issues[0];
+        const where = first?.path?.join('.') || 'file';
+        return { ok: false, error: `Backup rejected at "${where}": ${first?.message || 'invalid'}` };
       }
       const d = result.data;
       // adminCreds is never accepted from imports — schema strips it.

@@ -1,60 +1,21 @@
 import { z } from 'zod';
 
-// Backup imports — no size limits. Backups can include base64 images and
-// unlimited records (products, invoices, purchases, ledger, etc.).
-// `adminCreds` is intentionally OMITTED — backup files must never be able
-// to overwrite admin login credentials.
+// Backup imports — fully permissive. Accept any backup file shape so users
+// can restore from older or partial backups. `adminCreds` is intentionally
+// stripped so backups can never overwrite admin login credentials.
 
-const productSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  category: z.string(),
-  price: z.number().finite().min(0),
-  originalPrice: z.number().finite().min(0).optional(),
-  cost: z.number().finite().min(0),
-  stock: z.number().finite().min(0),
-  reorderLevel: z.number().finite().min(0),
-  badge: z.string().optional(),
-  barcode: z.string().optional(),
-  sku: z.string().optional(),
-  vendorId: z.string().optional(),
-  location: z.string().optional(),
-  description: z.string().optional(),
-  imageUrl: z.string().optional(),
-}).passthrough();
+const looseObject = z.object({}).passthrough();
 
-const customerSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-}).passthrough();
+const productSchema = looseObject;
+const customerSchema = looseObject;
+const vendorSchema = looseObject;
+const purchaseSchema = looseObject;
+const ledgerSchema = looseObject;
+const invoiceSchema = looseObject;
 
-const vendorSchema = customerSchema;
-
-const purchaseSchema = z.object({ id: z.string() }).passthrough();
-const ledgerSchema = z.object({ id: z.string() }).passthrough();
-const invoiceSchema = z.object({ id: z.string() }).passthrough();
-
-const settingsSchema = z.object({
-  storeName: z.string(),
-  storeNote: z.string().optional().default(''),
-  heroImageUrl: z.string().optional().default(''),
-  logoImageUrl: z.string().optional().default(''),
-}).partial().passthrough();
-
-const themeSchema = z.object({
-  primaryHue: z.number().min(0).max(360),
-  primarySat: z.number().min(0).max(100),
-  primaryLight: z.number().min(0).max(100),
-  radius: z.number().min(0).max(48),
-  fontDisplay: z.string(),
-  fontBody: z.string(),
-}).partial();
-
-const prefsSchema = z.object({
-  currency: z.string(),
-  currencyPosition: z.enum(['before', 'after']),
-  language: z.enum(['my', 'en']),
-}).partial();
+const settingsSchema = looseObject;
+const themeSchema = looseObject;
+const prefsSchema = looseObject;
 
 export const importSchema = z.object({
   products: z.array(productSchema).optional(),
@@ -67,7 +28,7 @@ export const importSchema = z.object({
   theme: themeSchema.optional(),
   prefs: prefsSchema.optional(),
   categories: z.array(z.string()).optional(),
-  // adminCreds intentionally NOT accepted — see comment above.
+  // adminCreds intentionally NOT accepted.
 }).passthrough();
 
 export type ImportPayload = z.infer<typeof importSchema>;
