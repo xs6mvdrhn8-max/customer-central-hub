@@ -9,6 +9,7 @@ import { Plus, X, Download, Upload, RotateCcw, Palette, ShieldAlert } from 'luci
 import { SortableList } from '@/components/SortableList';
 import { toast } from 'sonner';
 import { readBackupFile } from '@/lib/backup';
+import { parseBackupJson } from '@/lib/importBackup';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 
 const FONTS_DISPLAY = ['Playfair Display', 'DM Sans', 'Inter', 'Noto Sans Myanmar'] as const;
@@ -51,19 +52,12 @@ export function CustomizationAdmin() {
     if (!f) return;
     try {
       const json = await readBackupFile(f);
-      let parsed: any = {};
-      try { parsed = JSON.parse(json); } catch { toast.error('File is not a valid backup'); e.target.value = ''; return; }
+      const parsed = parseBackupJson(json);
+      if (!parsed.ok) { toast.error(parsed.error); e.target.value = ''; return; }
       setPreview({
         json,
         exportedAt: parsed.exportedAt,
-        counts: {
-          products: parsed.products?.length ?? 0,
-          customers: parsed.customers?.length ?? 0,
-          invoices: parsed.invoices?.length ?? 0,
-          vendors: parsed.vendors?.length ?? 0,
-          purchases: parsed.purchases?.length ?? 0,
-          ledger: parsed.ledger?.length ?? 0,
-        },
+        counts: parsed.counts,
       });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not read backup file');
