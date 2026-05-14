@@ -53,7 +53,7 @@ export function CustomizationAdmin() {
     try {
       const json = await readBackupFile(f);
       const parsed = parseBackupJson(json);
-      if (!parsed.ok) { toast.error(parsed.error); e.target.value = ''; return; }
+      if ('error' in parsed) { toast.error(parsed.error); e.target.value = ''; return; }
       setPreview({
         json,
         exportedAt: parsed.exportedAt,
