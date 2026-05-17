@@ -17,6 +17,7 @@ import { ProfitLossAdmin } from '@/components/admin/ProfitLossAdmin';
 import { SettingsAdmin } from '@/components/admin/SettingsAdmin';
 import { CustomizationAdmin } from '@/components/admin/CustomizationAdmin';
 import { VendorPriceBotAdmin } from '@/components/admin/VendorPriceBotAdmin';
+import { PriceUpdateAdmin } from '@/components/admin/PriceUpdateAdmin';
 
 export function AdminView() {
   const { isAdmin, loginAdmin, logoutAdmin, isDefaultAdminPassword } = useStore();
