@@ -94,6 +94,7 @@ export function AdminView() {
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
           <TabsTrigger value="vendorbot">Vendor Price Bot</TabsTrigger>
+          <TabsTrigger value="priceupdate">Price Update</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
           <TabsTrigger value="pl">P & L</TabsTrigger>
           <TabsTrigger value="customize">Customize</TabsTrigger>
