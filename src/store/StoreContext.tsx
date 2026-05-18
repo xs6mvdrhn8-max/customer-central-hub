@@ -282,16 +282,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updatePrefs: (s) => setPrefs((prev) => ({ ...prev, ...s })),
     setCategories: (c) => setCategoriesState(c),
     updateAdminCreds: async (c) => {
-      const passwordHash = await sha256(c.password);
+      const passwordHash = await hashPassword(c.password);
       setAdminCreds({ username: c.username, passwordHash });
+      loginAttempts = 0;
+      loginLockedUntil = 0;
     },
     loginAdmin: async (u, p) => {
-      const hash = await sha256(p);
-      if (u === adminCreds.username && hash === adminCreds.passwordHash) {
-        setIsAdmin(true);
-        return true;
+      // In-memory rate limit. Resets on page reload, which still blocks
+      // scripted brute-force from the browser console within a session.
+      const now = Date.now();
+      if (loginLockedUntil > now) return false;
+
+      const ok = u === adminCreds.username && (await verifyPassword(p, adminCreds.passwordHash));
+      if (!ok) {
+        loginAttempts++;
+        if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          loginLockedUntil = now + LOGIN_LOCK_MS;
+          loginAttempts = 0;
+        }
+        return false;
       }
-      return false;
+
+      loginAttempts = 0;
+      loginLockedUntil = 0;
+      setIsAdmin(true);
+      // Transparently upgrade legacy unsalted SHA-256 records to PBKDF2.
+      if (isLegacyHash(adminCreds.passwordHash)) {
+        try {
+          const upgraded = await hashPassword(p);
+          setAdminCreds({ username: adminCreds.username, passwordHash: upgraded });
+        } catch { /* non-fatal: keep legacy hash */ }
+      }
+      return true;
     },
     logoutAdmin: () => setIsAdmin(false),
 
