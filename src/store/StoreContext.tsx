@@ -4,7 +4,13 @@ import {
   Invoice, CartItem, StoreSettings,
 } from '@/types';
 import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from './customization';
-import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
+import {
+  hashPassword,
+  verifyPassword,
+  isLegacyHash,
+  isDefaultPasswordHash,
+  DEFAULT_ADMIN_PASSWORD_HASH,
+} from '@/lib/crypto';
 import { parseBackupJson } from '@/lib/importBackup';
 import { createBackupBlob } from '@/lib/backup';
 import { clearOfflineState, readOfflineState, writeOfflineState } from '@/lib/offlineDb';
