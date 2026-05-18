@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
