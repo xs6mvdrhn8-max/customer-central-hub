@@ -85,6 +85,15 @@ interface StoreState {
 
 const STORAGE_KEY = 'pt-store-v2';
 
+// In-memory brute-force throttle for the admin login. Lives at module scope
+// so a scripted attacker calling loginAdmin() in a loop is rate-limited even
+// across React re-renders. Resets on full page reload, which is acceptable
+// for a local-only POS app.
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 60_000;
+let loginAttempts = 0;
+let loginLockedUntil = 0;
+
 const seedProducts: Product[] = [
   { id: 'p1', name: 'Cordless Drill 18V', category: 'Power Tools', price: 185000, cost: 140000, stock: 8, reorderLevel: 3, badge: 'NEW', location: 'Shelf A-1', description: 'Heavy duty cordless drill with 2 batteries.' },
   { id: 'p2', name: 'Hammer 16oz', category: 'Hand Tools', price: 12000, cost: 7500, stock: 24, reorderLevel: 5, location: 'Shelf B-2', description: 'Steel claw hammer with rubber grip.' },
