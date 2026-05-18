@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { useStore } from '@/store/StoreContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,8 +68,36 @@ const toNum = (s: any): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null;
 };
 
-function parseSheetRows(ws: XLSX.WorkSheet, sourceName: string): SupplierRow[] {
-  const json = XLSX.utils.sheet_to_json<Record<string, any>>(ws, { defval: '', raw: false });
+function parseSheetRows(ws: ExcelJS.Worksheet, sourceName: string): SupplierRow[] {
+  // Build array of row objects keyed by the header row (row 1).
+  const headerRow = ws.getRow(1);
+  const headers: string[] = [];
+  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    headers[colNumber] = String(cell.value ?? '').trim();
+  });
+  if (headers.filter(Boolean).length === 0) return [];
+
+  const json: Record<string, any>[] = [];
+  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const obj: Record<string, any> = {};
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const h = headers[colNumber];
+      if (!h) return;
+      const v: any = cell.value;
+      // Flatten rich-text/formula/hyperlink values to plain text/number.
+      if (v && typeof v === 'object') {
+        if ('result' in v) obj[h] = (v as any).result;
+        else if ('text' in v) obj[h] = (v as any).text;
+        else if ('richText' in v) obj[h] = (v as any).richText.map((p: any) => p.text).join('');
+        else if ('hyperlink' in v) obj[h] = (v as any).text ?? (v as any).hyperlink;
+        else obj[h] = String(v);
+      } else {
+        obj[h] = v;
+      }
+    });
+    json.push(obj);
+  });
   if (json.length === 0) return [];
 
   const findCol = (...keys: string[]) =>
@@ -110,11 +138,12 @@ function parseSheetRows(ws: XLSX.WorkSheet, sourceName: string): SupplierRow[] {
 
 async function parseExcelFile(file: File): Promise<SupplierRow[]> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: 'array' });
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf);
   const all: SupplierRow[] = [];
-  for (const name of wb.SheetNames) {
-    all.push(...parseSheetRows(wb.Sheets[name], `${file.name}:${name}`));
-  }
+  wb.eachSheet((ws) => {
+    all.push(...parseSheetRows(ws, `${file.name}:${ws.name}`));
+  });
   const seen = new Map<string, SupplierRow>();
   for (const r of all) if (!seen.has(r.key)) seen.set(r.key, r);
   return [...seen.values()];

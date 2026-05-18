@@ -4,7 +4,13 @@ import {
   Invoice, CartItem, StoreSettings,
 } from '@/types';
 import { ThemeSettings, AppPreferences, DEFAULT_THEME, DEFAULT_PREFS, T } from './customization';
-import { sha256, DEFAULT_ADMIN_PASSWORD_HASH } from '@/lib/crypto';
+import {
+  hashPassword,
+  verifyPassword,
+  isLegacyHash,
+  isDefaultPasswordHash,
+  DEFAULT_ADMIN_PASSWORD_HASH,
+} from '@/lib/crypto';
 import { parseBackupJson } from '@/lib/importBackup';
 import { createBackupBlob } from '@/lib/backup';
 import { clearOfflineState, readOfflineState, writeOfflineState } from '@/lib/offlineDb';
@@ -78,6 +84,15 @@ interface StoreState {
 }
 
 const STORAGE_KEY = 'pt-store-v2';
+
+// In-memory brute-force throttle for the admin login. Lives at module scope
+// so a scripted attacker calling loginAdmin() in a loop is rate-limited even
+// across React re-renders. Resets on full page reload, which is acceptable
+// for a local-only POS app.
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCK_MS = 60_000;
+let loginAttempts = 0;
+let loginLockedUntil = 0;
 
 const seedProducts: Product[] = [
   { id: 'p1', name: 'Cordless Drill 18V', category: 'Power Tools', price: 185000, cost: 140000, stock: 8, reorderLevel: 3, badge: 'NEW', location: 'Shelf A-1', description: 'Heavy duty cordless drill with 2 batteries.' },
@@ -230,7 +245,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     products, customers, vendors, purchases, ledger, invoices, cart, settings,
     theme, prefs, categories,
     adminUsername: adminCreds.username,
-    isDefaultAdminPassword: adminCreds.passwordHash === DEFAULT_ADMIN_PASSWORD_HASH,
+    isDefaultAdminPassword: isDefaultPasswordHash(adminCreds.passwordHash),
     isAdmin, t,
     setProducts,
     upsertProduct: upsert(setProducts),
@@ -276,16 +291,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updatePrefs: (s) => setPrefs((prev) => ({ ...prev, ...s })),
     setCategories: (c) => setCategoriesState(c),
     updateAdminCreds: async (c) => {
-      const passwordHash = await sha256(c.password);
+      const passwordHash = await hashPassword(c.password);
       setAdminCreds({ username: c.username, passwordHash });
+      loginAttempts = 0;
+      loginLockedUntil = 0;
     },
     loginAdmin: async (u, p) => {
-      const hash = await sha256(p);
-      if (u === adminCreds.username && hash === adminCreds.passwordHash) {
-        setIsAdmin(true);
-        return true;
+      // In-memory rate limit. Resets on page reload, which still blocks
+      // scripted brute-force from the browser console within a session.
+      const now = Date.now();
+      if (loginLockedUntil > now) return false;
+
+      const ok = u === adminCreds.username && (await verifyPassword(p, adminCreds.passwordHash));
+      if (!ok) {
+        loginAttempts++;
+        if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+          loginLockedUntil = now + LOGIN_LOCK_MS;
+          loginAttempts = 0;
+        }
+        return false;
       }
-      return false;
+
+      loginAttempts = 0;
+      loginLockedUntil = 0;
+      setIsAdmin(true);
+      // Transparently upgrade legacy unsalted SHA-256 records to PBKDF2.
+      if (isLegacyHash(adminCreds.passwordHash)) {
+        try {
+          const upgraded = await hashPassword(p);
+          setAdminCreds({ username: adminCreds.username, passwordHash: upgraded });
+        } catch { /* non-fatal: keep legacy hash */ }
+      }
+      return true;
     },
     logoutAdmin: () => setIsAdmin(false),
 
