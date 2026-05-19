@@ -224,7 +224,51 @@ export function ItemsAdmin() {
             {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
           <Input placeholder="Location (Shelf A-3)" value={form.location || ''} onChange={(e) => set('location', e.target.value)} />
-          <Input placeholder="Image URL" value={form.imageUrl || ''} onChange={(e) => set('imageUrl', e.target.value)} className="md:col-span-2" />
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-sm font-medium">Item Image</label>
+            <div className="flex items-start gap-3 flex-wrap">
+              {form.imageUrl ? (
+                <div className="relative">
+                  <img src={form.imageUrl} alt="preview" className="w-24 h-24 rounded-md object-cover border" />
+                  <Button
+                    type="button" variant="destructive" size="sm"
+                    className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                    onClick={() => set('imageUrl', '')}
+                    title="Remove image"
+                  >×</Button>
+                </div>
+              ) : (
+                <div className="w-24 h-24 rounded-md border-2 border-dashed flex items-center justify-center text-xs text-muted-foreground">
+                  No image
+                </div>
+              )}
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!f) return;
+                    if (f.size > 5 * 1024 * 1024) {
+                      alert('Image too large (max 5MB)');
+                      return;
+                    }
+                    const dataUrl = await new Promise<string>((res, rej) => {
+                      const r = new FileReader();
+                      r.onload = () => res(r.result as string);
+                      r.onerror = () => rej(r.error);
+                      r.readAsDataURL(f);
+                    });
+                    set('imageUrl', dataUrl);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  ဖုန်း/ကွန်ပျူတာထဲက ပုံကို တိုက်ရိုက်ရွေးပါ (max 5MB)။
+                </p>
+              </div>
+            </div>
+          </div>
           <Textarea placeholder="Description" value={form.description || ''} onChange={(e) => set('description', e.target.value)} className="md:col-span-2" rows={2} />
           <div className="md:col-span-2 flex gap-2">
             <Button type="submit">{form.id ? 'Update' : 'Save'} Item</Button>
